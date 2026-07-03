@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+		<LangVersion>9.0</LangVersion>
+
+		<PackageId>LabApi.Extensions</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>iomatix</Authors>
+		<Company>iomatix</Company>
+		<Description>Source-only shared extensions for SCP:SL LabAPI plugins.</Description>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<ContentTargetFolders>contentFiles</ContentTargetFolders>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="**\*.cs" />
+		<Content Include="**\*.cs" Pack="true" PackagePath="contentFiles\cs\any" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<PackageId>LabApi.Extensions-DEBUG</PackageId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Northwood.LabAPI" Version="1.1.7" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<SCPSL_References Condition="'$(SCPSL_References)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</SCPSL_References>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="Assembly-CSharp" HintPath="$(SCPSL_References)\Assembly-CSharp.dll" />
+		<Reference Include="UnityEngine" HintPath="$(SCPSL_References)\UnityEngine.dll" />
+		<Reference Include="UnityEngine.CoreModule" HintPath="$(SCPSL_References)\UnityEngine.CoreModule.dll" />
+	</ItemGroup>
+
+	<Target Name="AutoGenerateMarkdownDocs" AfterTargets="Build">
+		<Message Importance="high" Text="[Automation] Launching API registry documentation generation stream..." />
+		<Exec Command="python ..\generate_docs.py" WorkingDirectory="$(ProjectDir)" ContinueOnError="true" />
+	</Target>
+</Project>

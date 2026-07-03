@@ -1,0 +1,32 @@
+﻿## --- Visual Studio & .NET Core Baseline ---
+bin/
+obj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## --- User-specific files & IDE Caches ---
+.vs/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.swp
+
+## --- Build Output & Publishing Artifacts ---
+*.nuget.props
+*.nuget.targets
+*.nuget.dgspec.json
+*.nupkg
+*.snupkg
+
+## --- Operating System Junk ---
+[Dd]Thumbs.db
+EHthumbs.db
+[Tt]humbs.db
+.DS_Store
+
+## --- Logging & Crash Reports ---
+*.log
+*.CrashOutput.txt
