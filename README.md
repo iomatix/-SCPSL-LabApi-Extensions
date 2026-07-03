@@ -1,4 +1,4 @@
-﻿README.md# LabAPI Extensions
+﻿# LabAPI Extensions
 
 A high-performance, allocation-optimized utility and fluent API extension framework for LabAPI (SCP: Secret Laboratory modding engine).
 
