@@ -18,6 +18,12 @@ public static string FindEmbeddedAsset(this Assembly assembly, string primaryKey
 public static void CassieClear() => Announcer.Clear();
 ```
 
+### 🔹 `SanitizeCassieString()`
+**Description:** Systematically scrubs raw text fields, stripping hidden carriage returns and formatting errors while safely preserving empty strings for intentional text muting configurations.
+```csharp
+public static string SanitizeCassieString(this string rawMessage)
+```
+
 ### 🔹 `Cassie_GlitchyMessage()`
 **Description:** Dispatches an intentionally modulated, corrupted vocal sequence across the global audio matrix, computing its final playback duration tracking envelope.
 ```csharp
@@ -823,7 +829,7 @@ public float BlurDuration { get; set; } = 0f;
 ### 🔹 `DeafenDuration`
 **Description:** Gets or sets the duration coefficient in seconds for the post-escape environment auditory dampening filter.
 ```csharp
-public float DeafenDuration { get; set; } = 30f;
+public float DeafenDuration { get; set; } = 3.75f;
 ```
 
 ### 🔹 `OnSequenceStarted`
