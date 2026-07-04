@@ -13,7 +13,7 @@
 		<Description>Source-only shared extensions for SCP:SL LabAPI plugins.</Description>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
-
+		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 	</PropertyGroup>
