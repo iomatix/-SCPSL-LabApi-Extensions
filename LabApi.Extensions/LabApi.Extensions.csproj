@@ -7,7 +7,7 @@
 		<LangVersion>9.0</LangVersion>
 
 		<PackageId>LabApi.Extensions</PackageId>
-		<Version>0.5.0</Version>
+		<Version>0.9.0</Version>
 		<Authors>iomatix</Authors>
 		<Company>iomatix</Company>
 		<Description>Source-only shared extensions for SCP:SL LabAPI plugins.</Description>
@@ -15,8 +15,17 @@
 
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<ContentTargetFolders>contentFiles</ContentTargetFolders>
+
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
+		<None Include="..\LICENSE.md" Pack="true" PackagePath="\" />
+		<None Include="DOCUMENTATION.md" Pack="true" PackagePath="\" />
+	</ItemGroup>	
+	
 	<ItemGroup>
 		<Content Include="**\*.cs" Pack="true" PackagePath="contentFiles\cs\any" BuildAction="Compile" />
 	</ItemGroup>
