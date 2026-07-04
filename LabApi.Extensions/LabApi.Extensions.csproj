@@ -18,8 +18,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="**\*.cs" />
-		<Content Include="**\*.cs" Pack="true" PackagePath="contentFiles\cs\any" />
+		<Content Include="**\*.cs" Pack="true" PackagePath="contentFiles\cs\any" BuildAction="Compile" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">

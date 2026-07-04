@@ -56,4 +56,3 @@ namespace LabApi.Extensions.Misc
         }
     }
 }
-}

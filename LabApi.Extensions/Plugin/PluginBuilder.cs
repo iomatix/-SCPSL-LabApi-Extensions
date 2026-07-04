@@ -60,4 +60,3 @@ namespace LabApi.Extensions.Plugin
         }
     }
 }
-}
