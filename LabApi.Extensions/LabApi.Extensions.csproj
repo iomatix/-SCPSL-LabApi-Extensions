@@ -16,13 +16,11 @@
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<ContentTargetFolders>contentFiles</ContentTargetFolders>
 
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageReadmeFile>..\README.md</PackageReadmeFile>
+		<PackageLicenseFile>..\LICENSE.md</PackageLicenseFile>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\README.md" Pack="true" PackagePath="\" />
-		<None Include="..\LICENSE.md" Pack="true" PackagePath="\" />
 		<None Include="DOCUMENTATION.md" Pack="true" PackagePath="\" />
 	</ItemGroup>	
 	
