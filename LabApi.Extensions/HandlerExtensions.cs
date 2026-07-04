@@ -1,5 +1,4 @@
 ﻿using LabApi.Events.CustomHandlers;
-using LabApi.Events.CustomHandlers.Management;
 
 namespace LabApi.Extensions
 {

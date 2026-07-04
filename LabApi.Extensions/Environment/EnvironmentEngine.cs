@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using LabApi.Features.Wrappers;
 using MEC;
-using LabApi.Features.Wrappers;
+using UnityEngine;
 
 namespace LabApi.Extensions.Environment
 {

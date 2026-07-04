@@ -1,5 +1,5 @@
-﻿using System.Diagnostics;
-using LabApi.Features.Console;
+﻿using LabApi.Features.Console;
+using System.Diagnostics;
 
 namespace LabApi.Extensions.Misc
 {

@@ -1,8 +1,9 @@
-﻿using System;
+﻿using LabApi.Extensions.Misc;
+using LabApi.Features.Wrappers;
+using MapGeneration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using MapGeneration;
-using LabApi.Features.Wrappers;
 
 namespace LabApi.Extensions
 {

@@ -1,4 +1,7 @@
-﻿using LabApi.Features.Wrappers;
+﻿using Interactables.Interobjects.DoorUtils;
+using LabApi.Features.Enums;
+using LabApi.Features.Wrappers;
+using System.Collections.Generic;
 
 namespace LabApi.Extensions
 {

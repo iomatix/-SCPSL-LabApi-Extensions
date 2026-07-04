@@ -1,15 +1,14 @@
-﻿using System;
-using LabApi.Loader.Features.Configs;
+﻿using LabApi.Loader.Features.Configuration;
 using LabApi.Loader.Features.Plugins;
+using System;
 
 namespace LabApi.Extensions.Plugin
 {
-
     /// <summary>
     /// A high-performance fluent orchestration builder designed to streamline sub-configuration deployment and module initialization sequences.
     /// </summary>
-    /// <typeparam name="TConfig">The primary framework configuration type conforming to <see cref="IConfig"/>.</typeparam>
-    public sealed class PluginBuilder<TConfig> where TConfig : IConfig
+    /// <typeparam name="TConfig">The primary framework configuration type conforming to <see cref="LabApiConfig"/>.</typeparam>
+    public sealed class PluginBuilder<TConfig> where TConfig : LabApiConfig, new()
     {
         private readonly Plugin<TConfig> _plugin;
 

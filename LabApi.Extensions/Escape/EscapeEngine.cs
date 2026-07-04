@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using LabApi.Features.Wrappers;
 using MEC;
-using LabApi.Features.Wrappers;
 using PlayerRoles;
+using System.Collections.Generic;
 
 namespace LabApi.Extensions.Escape
 {

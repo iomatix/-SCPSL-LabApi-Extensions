@@ -1,6 +1,6 @@
-﻿using System;
+﻿using MEC;
+using System;
 using System.Collections.Generic;
-using MEC;
 
 namespace LabApi.Extensions
 {

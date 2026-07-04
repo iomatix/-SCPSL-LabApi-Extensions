@@ -1,6 +1,6 @@
-﻿using System;
+﻿using LabApi.Features.Wrappers;
+using System;
 using UnityEngine;
-using LabApi.Features.Wrappers;
 
 namespace LabApi.Extensions.Escape
 {

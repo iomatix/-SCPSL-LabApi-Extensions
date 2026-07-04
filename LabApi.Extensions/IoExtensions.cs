@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LabApi.Extensions.Misc;
+using System;
 using System.IO;
 
 namespace LabApi.Extensions

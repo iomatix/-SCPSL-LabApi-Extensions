@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using LabApi.Features.Wrappers;
+﻿using LabApi.Features.Wrappers;
 
 namespace LabApi.Extensions
 {

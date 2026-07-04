@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LabApi.Loader;
+using System;
 
 namespace LabApi.Extensions
 {
@@ -21,7 +22,7 @@ namespace LabApi.Extensions
             this LabApi.Loader.Features.Plugins.Plugin<TMainConfig> plugin,
             string fileName,
             Action<TSubConfig> validationAction = null)
-            where TMainConfig : LabApi.Loader.Features.Configs.IConfig
+            where TMainConfig : LabApi.Loader.Features.Configuration.LabApiConfig, new()
             where TSubConfig : class, new()
         {
             if (plugin is null || string.IsNullOrEmpty(fileName))

@@ -1,8 +1,8 @@
-﻿using System;
+﻿using LabApi.Extensions.Components;
+using LabApi.Features.Wrappers;
+using MapGeneration;
 using System.Collections.Generic;
 using UnityEngine;
-using LabApi.Features.Wrappers;
-using CustomPlayerEffects;
 
 namespace LabApi.Extensions
 {
@@ -243,7 +243,7 @@ namespace LabApi.Extensions
             float sqrRadiusSize = radiusSize * radiusSize;
 
             // Iterating decoupled telemetry points safely to track spatial intersections
-            foreach (Vector3 checkpointPos in positions) 
+            foreach (Vector3 checkpointPos in positions)
             {
                 if ((player.Position - checkpointPos).sqrMagnitude <= sqrRadiusSize)
                 {

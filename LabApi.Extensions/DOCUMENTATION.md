@@ -505,7 +505,7 @@ public static bool IsInShelter(this Player player, float shelterZoneSize, IEnume
 ### 🔹 `LoadOrCreateSubConfig()`
 **Description:** Atomically loads a decentralized sub-configuration file from the filesystem. Automatically deploys a clean fallback instance, executes validation delegates, and flushes changes to disk if missing or corrupt. <typeparam name="TMainConfig">The core configuration type binding the primary plugin layout framework.</typeparam> <typeparam name="TSubConfig">The target modular sub-configuration class layer being initialized.</typeparam>
 ```csharp
-public static TSubConfig LoadOrCreateSubConfig<TMainConfig, TSubConfig>( this LabApi.Loader.Features.Plugins.Plugin<TMainConfig> plugin, string fileName, Action<TSubConfig> validationAction = null) where TMainConfig : LabApi.Loader.Features.Configs.IConfig where TSubConfig : class, new()
+public static TSubConfig LoadOrCreateSubConfig<TMainConfig, TSubConfig>( this LabApi.Loader.Features.Plugins.Plugin<TMainConfig> plugin, string fileName, Action<TSubConfig> validationAction = null) where TMainConfig : LabApi.Loader.Features.Configuration.LabApiConfig, new() where TSubConfig : class, new()
 ```
 
 ---

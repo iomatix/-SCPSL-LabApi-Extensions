@@ -1,6 +1,5 @@
-﻿using UnityEngine;
-using MapGeneration;
-using LabApi.Features.Wrappers;
+﻿using LabApi.Features.Wrappers;
+using UnityEngine;
 
 namespace LabApi.Extensions.Misc
 {

@@ -1,8 +1,7 @@
-﻿using System;
+﻿using LabApi.Features.Wrappers;
+using MEC;
 using System.Collections.Generic;
 using System.Linq;
-using MEC;
-using LabApi.Features.Wrappers;
 
 namespace LabApi.Extensions.RoundManagement
 {
