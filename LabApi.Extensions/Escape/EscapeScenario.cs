@@ -87,7 +87,7 @@ namespace LabApi.Extensions.Escape
         /// <summary>
         /// Gets or sets the duration coefficient in seconds for the post-escape environment auditory dampening filter.
         /// </summary>
-        public float DeafenDuration { get; set; } = 30f;
+        public float DeafenDuration { get; set; } = 3.75f;
         #endregion
 
         #region Lifecycle Event Interceptors
