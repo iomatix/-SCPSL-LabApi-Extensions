@@ -199,7 +199,7 @@ namespace LabApi.Extensions
         /// </summary>
         /// <param name="player">The target <see cref="Player"/> subject instance checked for dark room environmental parameters.</param>
         /// <returns><c>true</c> if the target player is verified within a room sector containing fully unpowered or disabled lighting grids; otherwise, <c>false</c>.</returns>
-        public static bool IsPlayerInDarkRoom(this Player player)
+        public static bool IsInDarkRoom(this Player player)
         {
             var room = player?.Room;
             if (room?.AllLightControllers == null) return false;

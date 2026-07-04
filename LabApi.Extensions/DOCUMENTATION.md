@@ -224,10 +224,10 @@ public static void LockElevatorsInZone(FacilityZone zone)
 public static void UnlockElevatorsInZone(FacilityZone zone)
 ```
 
-### 🔹 `IsPlayerInExecutiveElevator()`
+### 🔹 `IsInExecutiveElevator()`
 **Description:** Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
 ```csharp
-public static bool IsPlayerInExecutiveElevator(this Player player)
+public static bool IsInExecutiveElevator(this Player player)
 ```
 
 ### 🔹 `HandleElevatorsForRoom()`
@@ -442,10 +442,10 @@ public static bool HasActiveLightSource(this Player player)
 public static bool IsInRoom(this Player player, params RoomName[] roomNames)
 ```
 
-### 🔹 `IsPlayerInDarkRoom()`
+### 🔹 `IsInDarkRoom()`
 **Description:** Evaluates whether the localized room lighting grid envelope encompassing a specific <see cref="Player"/> instance has had its active illumination disabled.
 ```csharp
-public static bool IsPlayerInDarkRoom(this Player player)
+public static bool IsInDarkRoom(this Player player)
 ```
 
 ### 🔹 `IsWithinRadius()`

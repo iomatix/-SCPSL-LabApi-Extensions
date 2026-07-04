@@ -72,7 +72,7 @@ namespace LabApi.Extensions
         /// </summary>
         /// <param name="player">The target <see cref="Player"/> entity execution node evaluated for ongoing spatial tracking containment.</param>
         /// <returns><c>true</c> if the player entity is verified inside an elevator room boundary; otherwise, <c>false</c>.</returns>
-        public static bool IsPlayerInExecutiveElevator(this Player player)
+        public static bool IsInExecutiveElevator(this Player player)
         {
             var pRoom = player?.Room;
             if (pRoom == null) return false;
