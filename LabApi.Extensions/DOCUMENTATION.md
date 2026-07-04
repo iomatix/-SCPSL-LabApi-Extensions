@@ -852,6 +852,16 @@ public Action OnSequenceFinalized { get; set; }
 
 ---
 
+## 📦 Class: StringInterpretationExtensions
+
+### 🔹 `InterpretEnum()`
+**Description:** Fluently interprets a raw string input and resolves it against an enum layout using multi-stage heuristic cascades. <typeparam name="T">The target value mapping constraint conforming to standard system enums.</typeparam>
+```csharp
+public static InterpretationResult<T> InterpretEnum<T>(this string input) where T : struct, Enum
+```
+
+---
+
 ## 📦 Class: SafeRandom
 
 ### 🔹 `Next()`
