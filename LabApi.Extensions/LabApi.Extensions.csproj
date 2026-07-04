@@ -36,9 +36,78 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Reference Include="Assembly-CSharp" HintPath="$(SCPSL_References)\Assembly-CSharp.dll" />
-		<Reference Include="UnityEngine" HintPath="$(SCPSL_References)\UnityEngine.dll" />
-		<Reference Include="UnityEngine.CoreModule" HintPath="$(SCPSL_References)\UnityEngine.CoreModule.dll" />
+		<Reference Include="Assembly-CSharp">
+			<HintPath>$(SCPSL_References)\Assembly-CSharp.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Assembly-CSharp-firstpass">
+			<HintPath>$(SCPSL_References)\Assembly-CSharp-firstpass.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="NorthwoodLib">
+			<HintPath>$(SCPSL_References)\NorthwoodLib.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="CommandSystem.Core">
+			<HintPath>$(SCPSL_References)\CommandSystem.Core.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="PlayerRoles">
+			<HintPath>$(SCPSL_References)\PlayerRoles.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="MapGeneration">
+			<HintPath>$(SCPSL_References)\MapGeneration.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="PlayerStats">
+			<HintPath>$(SCPSL_References)\PlayerStats.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="InventorySystem">
+			<HintPath>$(SCPSL_References)\InventorySystem.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Interactables">
+			<HintPath>$(SCPSL_References)\Interactables.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="CustomPlayerEffects">
+			<HintPath>$(SCPSL_References)\CustomPlayerEffects.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="VoiceChat">
+			<HintPath>$(SCPSL_References)\VoiceChat.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Mirror">
+			<HintPath>$(SCPSL_References)\Mirror.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Pooling">
+			<HintPath>$(SCPSL_References)\Pooling.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine">
+			<HintPath>$(SCPSL_References)\UnityEngine.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(SCPSL_References)\UnityEngine.CoreModule.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.PhysicsModule">
+			<HintPath>$(SCPSL_References)\UnityEngine.PhysicsModule.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.AudioModule">
+			<HintPath>$(SCPSL_References)\UnityEngine.AudioModule.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.AnimationModule">
+			<HintPath>$(SCPSL_References)\UnityEngine.AnimationModule.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
 	</ItemGroup>
 
 	<Target Name="AutoGenerateMarkdownDocs" AfterTargets="Build">
