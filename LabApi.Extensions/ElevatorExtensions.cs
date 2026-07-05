@@ -29,7 +29,7 @@ namespace LabApi.Extensions
         /// </summary>
         /// <param name="room">The source <see cref="Room"/> spatial structure queried for mechanical transition operations.</param>
         /// <returns><c>true</c> if an elevator is bound to the room and currently processing an active mechanical cycle; otherwise, <c>false</c>.</returns>
-        public static bool IsElevatorActiveInRoom(this Room room)
+        public static bool IsActiveInRoom(this Room room)
         {
             if (room == null) return false;
 
