@@ -83,7 +83,7 @@ namespace LabApi.Extensions
         /// </summary>
         /// <param name="room">The target <see cref="Room"/> grid instance verified for active generator properties.</param>
         /// <returns><c>true</c> if the zone contains zero engaged power components or if no generators are registered inside the topology; otherwise, <c>false</c>.</returns>
-        public static bool IsRoomFreeOfEngagedGenerators(this Room room)
+        public static bool IsFreeOfEngagedGenerators(this Room room)
         {
             if (!Generator.TryGetFromRoom(room, out List<Generator> generators) || generators == null)
                 return true;
@@ -100,12 +100,12 @@ namespace LabApi.Extensions
         public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
         {
             if (room == null) return false;
-            if (!room.IsRoomFreeOfEngagedGenerators()) return false;
+            if (!room.IsFreeOfEngagedGenerators()) return false;
 
             foreach (var neighborIdentifier in room.ConnectedRooms)
             {
                 var neighborRoom = Room.Get(neighborIdentifier);
-                if (neighborRoom != null && !neighborRoom.IsRoomFreeOfEngagedGenerators())
+                if (neighborRoom != null && !neighborRoom.IsFreeOfEngagedGenerators())
                     return false;
             }
             return true;
