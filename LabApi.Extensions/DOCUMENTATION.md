@@ -428,6 +428,24 @@ public static int LimitMin(this int value, int minBaseline) => Mathf.Max(minBase
 public static double LimitMin(this double value, double minBaseline) => value < minBaseline ? minBaseline : value;
 ```
 
+### 🔹 `IsNanOrInfinity()`
+**Description:** Verifies whether the specified single-precision floating-point value evaluates to NaN or Infinity.
+```csharp
+public static bool IsNanOrInfinity(this float value) => float.IsNaN(value) || float.IsInfinity(value);
+```
+
+### 🔹 `IsNanOrInfinity()`
+**Description:** Verifies whether the specified double-precision floating-point value evaluates to NaN or Infinity.
+```csharp
+public static bool IsNanOrInfinity(this double value) => double.IsNaN(value) || double.IsInfinity(value);
+```
+
+### 🔹 `IsNanOrInfinity()`
+**Description:** Baseline safety fallback for integer primitives. Always returns false as integral types cannot represent NaN or Infinity states.
+```csharp
+public static bool IsNanOrInfinity(this int value) => false;
+```
+
 ---
 
 ## 📦 Class: PickupExtensions
