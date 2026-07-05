@@ -446,6 +446,18 @@ public static bool IsNanOrInfinity(this double value) => double.IsNaN(value) || 
 public static bool IsNanOrInfinity(this int value) => false;
 ```
 
+### 🔹 `RoundToInt()`
+**Description:** Rounds a single-precision floating-point value to the nearest 32-bit signed integer using high-performance engine math routines.
+```csharp
+public static int RoundToInt(this float value) => Mathf.RoundToInt(value);
+```
+
+### 🔹 `RoundToInt()`
+**Description:** Rounds a double-precision floating-point value to the nearest 32-bit signed integer using standard mathematical truncation loops.
+```csharp
+public static int RoundToInt(this double value) => (int)Math.Round(value);
+```
+
 ---
 
 ## 📦 Class: PickupExtensions
@@ -506,6 +518,24 @@ public static float GetDistanceTo(this Player player, Vector3 position)
 **Description:** Evaluates defensively whether the specified player is positioned within a concrete linear maximum distance radius from a target spatial coordinate vector.
 ```csharp
 public static bool IsWithinDistance(this Player player, Vector3 position, float maxDistance)
+```
+
+### 🔹 `GetHeldLightSourceState()`
+**Description:** Resolves the raw electrical emission state of whatever light-emitting hardware the subject currently holds.
+```csharp
+public static bool GetHeldLightSourceState(this Player player)
+```
+
+### 🔹 `SetHeldLightSourceState()`
+**Description:** Forces an immediate electrical state override on whatever light-emitting hardware the subject currently holds.
+```csharp
+public static void SetHeldLightSourceState(this Player player, bool emit)
+```
+
+### 🔹 `FlickerHeldLightSourceCoroutine()`
+**Description:** Fluently drives an asynchronous localized strobe/flicker execution loop across the subject's held lightsource hardware asset layer.
+```csharp
+public static IEnumerator<float> FlickerHeldLightSourceCoroutine(this Player player, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
 ```
 
 ### 🔹 `HasActiveLightSource()`
