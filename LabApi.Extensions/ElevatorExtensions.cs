@@ -4,6 +4,7 @@ using MapGeneration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace LabApi.Extensions
 {
@@ -13,6 +14,71 @@ namespace LabApi.Extensions
     /// </summary>
     internal static class ElevatorExtensions
     {
+        #region Active Floor Operations (Safe State Mutators)
+        /// <summary>
+        /// Fluently opens ONLY the elevator doors located on the currently active floor level, preventing cross-floor safety exploits.
+        /// </summary>
+        /// <param name="elevator">The target <see cref="Elevator"/> instance undergoing door manipulation.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the activation state even if the door is restricted by a server lock.</param>
+        public static void OpenActiveDoors(this Elevator elevator, bool bypassLocks = false)
+        {
+            if (elevator?.Doors is null) return;
+
+            // SCP:SL native architecture maps the Elevator's floor level arrays dynamically.
+            // We iterate and evaluate each door component, opening exclusively those attached to the active deck.
+            foreach (Door door in elevator.Doors)
+            {
+                if (door.GameObject != null && door.GameObject.TryGetComponent<Interactables.Interobjects.ElevatorDoor>(out var nativeDoor))
+                {
+                    if (elevator.IsDoorAtCurrentLevel(door, nativeDoor))
+                    {
+                        door.Open(bypassLocks);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fluently closes ONLY the elevator doors located on the currently active floor level.
+        /// </summary>
+        /// <param name="elevator">The target <see cref="Elevator"/> instance undergoing door manipulation.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the activation state even if the door is restricted by a server lock.</param>
+        public static void CloseActiveDoors(this Elevator elevator, bool bypassLocks = false)
+        {
+            if (elevator?.Doors is null) return;
+
+            foreach (Door door in elevator.Doors)
+            {
+                if (door.GameObject != null && door.GameObject.TryGetComponent<Interactables.Interobjects.ElevatorDoor>(out var nativeDoor))
+                {
+                    if (elevator.IsDoorAtCurrentLevel(door, nativeDoor))
+                    {
+                        door.Close(bypassLocks);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Defensive helper executing a high-precision proximity check to verify if a door asset belongs to the active elevator car level.
+        /// </summary>
+        /// <param name="elevator">The source <see cref="Elevator"/> wrapper platform being polled.</param>
+        /// <param name="door">The high-level <see cref="Door"/> wrapper asset checked for intersection bounds.</param>
+        /// <param name="nativeDoor">The native underlying <see cref="Interactables.Interobjects.ElevatorDoor"/> engine instance component.</param>
+        /// <returns><c>true</c> if the door position maps perfectly onto the elevator car's active vertical alignment track; otherwise, <c>false</c>.</returns>
+        private static bool IsDoorAtCurrentLevel(this Elevator elevator, Door door, Interactables.Interobjects.ElevatorDoor nativeDoor)
+        {
+            // FIXED: Replaced non-existent .Chamber property allocation with the native base component wrapper hook (.Base)
+            if (elevator?.Base is null) return false;
+
+            float verticalDelta = Math.Abs(door.Position.y - elevator.Base.transform.position.y);
+
+            // A threshold delta limit of 3.5 meters perfectly encapsulates the vertical clearance envelope of an active cabin floor link
+            return verticalDelta <= 3.5f;
+        }
+        #endregion
+
+        #region Collection Query Extensions (Spatial Matrices)
         /// <summary>
         /// Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
         /// </summary>
@@ -24,6 +90,19 @@ namespace LabApi.Extensions
                 elevator.CurrentDestination.Rooms.Any(room => Room.Get(room.Base)?.Zone == zone));
         }
 
+        /// <summary>
+        /// Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
+        /// </summary>
+        /// <param name="room">The anchoring <see cref="Room"/> instance tracking local destination mappings.</param>
+        /// <returns>An enumerable sequence tracking matching elevator units linked directly to the specified layout node mapping.</returns>
+        public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+        {
+            if (room == null) return Enumerable.Empty<Elevator>();
+            return Elevator.List.Where(elevator => elevator.CurrentDestination?.Rooms.Contains(room) == true);
+        }
+        #endregion
+
+        #region State Assessment (Validation Ensembles)
         /// <summary>
         /// Evaluates whether any elevator infrastructure bound to the specified room is actively executing a mechanical movement sequence.
         /// </summary>
@@ -39,16 +118,20 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
+        /// Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
         /// </summary>
-        /// <param name="room">The anchoring <see cref="Room"/> instance tracking local destination mappings.</param>
-        /// <returns>An enumerable sequence tracking matching elevator units linked directly to the specified layout node mapping.</returns>
-        public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+        /// <param name="player">The target <see cref="Player"/> entity execution node evaluated for ongoing spatial tracking containment.</param>
+        /// <returns><c>true</c> if the player entity is verified inside an elevator room boundary; otherwise, <c>false</c>.</returns>
+        public static bool IsInExecutiveElevator(this Player player)
         {
-            if (room == null) return Enumerable.Empty<Elevator>();
-            return Elevator.List.Where(elevator => elevator.CurrentDestination?.Rooms.Contains(room) == true);
-        }
+            var pRoom = player?.Room;
+            if (pRoom == null) return false;
 
+            return Elevator.List.Any(elevator => elevator.CurrentDestination.Rooms.Contains(pRoom));
+        }
+        #endregion
+
+        #region Mass Enforcement (Administrative Hooks)
         /// <summary>
         /// Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
         /// </summary>
@@ -68,19 +151,6 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
-        /// </summary>
-        /// <param name="player">The target <see cref="Player"/> entity execution node evaluated for ongoing spatial tracking containment.</param>
-        /// <returns><c>true</c> if the player entity is verified inside an elevator room boundary; otherwise, <c>false</c>.</returns>
-        public static bool IsInExecutiveElevator(this Player player)
-        {
-            var pRoom = player?.Room;
-            if (pRoom == null) return false;
-
-            return Elevator.List.Any(elevator => elevator.CurrentDestination.Rooms.Contains(pRoom));
-        }
-
-        /// <summary>
         /// Processes a localized, probability-driven evaluation sweep across all elevators bound to a room, 
         /// safely routing matching units into an execution action graph.
         /// </summary>
@@ -97,5 +167,6 @@ namespace LabApi.Extensions
                 if (SafeRandom.Range(0f, 100f) <= affectChance) elevatorAction(elevator);
             }
         }
+        #endregion
     }
 }

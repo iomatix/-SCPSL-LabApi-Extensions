@@ -150,9 +150,10 @@ namespace LabApi.Extensions
 
             room.HandleElevatorsForRoom(elevatorAffectChance, duration, elevator =>
             {
+                elevator.Doors.Close();
                 elevator.LockAllDoors();
 
-                var coroutine = Timing.CallDelayed(duration, () => elevator.UnlockAllDoors());
+                var coroutine = Timing.CallDelayed(duration, () => { elevator.UnlockAllDoors(); elevator.Doors.Open(); });
                 coroutine.Tag = "LabApiExtensions-ElevatorUnlock";
             });
         }

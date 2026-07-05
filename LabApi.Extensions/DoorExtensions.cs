@@ -37,14 +37,14 @@ namespace LabApi.Extensions
         /// <param name="doors">The source collection of doors evaluated for identity matching.</param>
         /// <param name="names">The structural door identifier criteria context matrix used for filtering.</param>
         /// <returns>A filtered enumerable sequence layout yielding matching door entities.</returns>
-        public static System.Collections.Generic.IEnumerable<Door> WhereNameIn(this System.Collections.Generic.IEnumerable<Door> doors, params DoorName[] names)
+        public static IEnumerable<Door> WhereNameIn(this IEnumerable<Door> doors, params DoorName[] names)
         {
             if (doors == null || names == null || names.Length == 0)
             {
                 return System.Linq.Enumerable.Empty<Door>();
             }
 
-            System.Collections.Generic.List<Door> filtered = new System.Collections.Generic.List<Door>();
+            List<Door> filtered = new();
             foreach (Door door in doors)
             {
                 if (door == null) continue;
@@ -62,6 +62,20 @@ namespace LabApi.Extensions
         }
 
         #region Single Door Operations
+
+        /// <summary>
+        /// Fluently unseals an individual door instance, driving its structural passage topology state to open.
+        /// </summary>
+        /// <param name="door">The target door instance targeted for structural manipulation.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if the door is restricted by an active lock.</param>
+        public static void Open(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: true, bypassLocks);
+
+        /// <summary>
+        /// Fluently seals an individual door instance, driving its structural passage topology state to closed.
+        /// </summary>
+        /// <param name="door">The target door instance targeted for structural manipulation.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if the door is restricted by an active lock.</param>
+        public static void Close(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: false, bypassLocks);
 
         /// <summary>
         /// Updates the administrative server-side lock state of an individual door instance under a specific constraint reason.
@@ -111,6 +125,20 @@ namespace LabApi.Extensions
         #endregion
 
         #region Batch Collection Operations
+
+        /// <summary>
+        /// Attempts to mass unseal an aggregated collection sequence of doors cleanly.
+        /// </summary>
+        /// <param name="doors">The target collection stream of doors undergoing passage status modification.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if individual doors are restricted by an active lock.</param>
+        public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: true, bypassLocks);
+
+        /// <summary>
+        /// Attempts to mass seal an aggregated collection sequence of doors cleanly.
+        /// </summary>
+        /// <param name="doors">The target collection stream of doors undergoing passage status modification.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if individual doors are restricted by an active lock.</param>
+        public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: false, bypassLocks);
 
         /// <summary>
         /// Forcibly updates the administrative server-side lock state across an aggregated collection sequence of doors.
