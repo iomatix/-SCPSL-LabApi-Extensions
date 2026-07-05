@@ -827,7 +827,7 @@ public static UnityEngine.Vector3 GetRandomUpwardSphereVelocity(float magnitude 
 ```
 
 ### 🔹 `Sanitize()`
-**Description:** Defensively audits all float components of a 3D vector against structural corruption anomalies (NaN or Infinity parameters).
+**Description:** Audits all float components of a 3D vector against structural corruption anomalies like NaN or Infinity.
 ```csharp
 public static UnityEngine.Vector3 Sanitize(this UnityEngine.Vector3 vector, UnityEngine.Vector3 fallback = default)
 ```
