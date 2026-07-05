@@ -622,6 +622,12 @@ public static bool IsEligibleForEscape(this Player player, Vector3 escapeZone, f
 public static bool IsInShelter(this Player player, float shelterZoneSize, IEnumerable<Vector3> cachedShelterLocations, params RoomName[] additionalRooms)
 ```
 
+### 🔹 `TryResolveFuzzy()`
+**Description:** Advanced 3-Stage Heuristic Cascade to find, expand and resolve unique players securely across an active collection stream.
+```csharp
+public static bool TryResolveFuzzy(this IEnumerable<Player> players, string identifier, out Player target, out string errorResponse)
+```
+
 ---
 
 ## 📦 Class: PluginConfigExtensions
@@ -764,6 +770,12 @@ public static IEnumerator<float> FlickerBulkLightsCoroutine(this IEnumerable<Roo
 **Description:** Enforces standard lowercase invariant formatting on a raw network identifier token, mitigating platform-specific auth casing anomalies and dictionary key mismatches.
 ```csharp
 public static string NormalizeUserId(this string userId)
+```
+
+### 🔹 `ComputeLevenshteinDistance()`
+**Description:** Computes the Levenshtein Distance between two string primitives with zero heap allocations.
+```csharp
+public static int ComputeLevenshteinDistance(this string source, string target)
 ```
 
 ---

@@ -1,6 +1,6 @@
 ﻿using LabApi.Loader;
-using LabApi.Loader.Features.Plugins;
 using LabApi.Loader.Features.Configuration;
+using LabApi.Loader.Features.Plugins;
 using System;
 
 namespace LabApi.Extensions

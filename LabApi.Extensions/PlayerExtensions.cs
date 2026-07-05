@@ -5,6 +5,7 @@ using MapGeneration;
 using MEC;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LabApi.Extensions
@@ -511,6 +512,85 @@ namespace LabApi.Extensions
         }
         #endregion
 
+        #region identity
+        /// <summary>
+        /// Advanced 3-Stage Heuristic Cascade to find, expand and resolve unique players securely across an active collection stream.
+        /// </summary>
+        public static bool TryResolveFuzzy(this IEnumerable<Player> players, string identifier, out Player target, out string errorResponse)
+        {
+            target = null;
+            string cleanSearch = identifier.Trim().ToLowerInvariant();
 
+            if (string.IsNullOrWhiteSpace(cleanSearch))
+            {
+                errorResponse = "Target Assignment Failed: Provided player identifier descriptor cannot be empty.";
+                return false;
+            }
+
+            var allPlayers = players.ToList();
+
+            // STAGE 1: Exact / Case-Insensitive Verification (ID, Normalized UserID or Nickname)
+            Player exactMatch = allPlayers.FirstOrDefault(p =>
+                p.PlayerId.ToString() == cleanSearch ||
+                p.UserId.NormalizeUserId() == cleanSearch ||
+                p.Nickname.Equals(cleanSearch, StringComparison.OrdinalIgnoreCase));
+
+            if (exactMatch is not null)
+            {
+                target = exactMatch;
+                errorResponse = null;
+                return true;
+            }
+
+            // STAGE 2: Substring Containment Verification Mapping
+            var candidates = allPlayers.Where(p =>
+            {
+                string nickLower = p.Nickname.ToLowerInvariant();
+                return nickLower.Contains(cleanSearch) || cleanSearch.Contains(nickLower);
+            }).ToList();
+
+            // STAGE 3: Typo-Tolerance Matrix via Levenshtein Distance algorithms
+            if (candidates.Count == 0)
+            {
+                var distanceScores = new List<(Player player, int distance)>();
+                foreach (Player p in allPlayers)
+                {
+                    string nickLower = p.Nickname.ToLowerInvariant();
+                    int distance = cleanSearch.ComputeLevenshteinDistance(nickLower);
+
+                    if (distance <= 3 && distance < nickLower.Length - 2)
+                    {
+                        distanceScores.Add((p, distance));
+                    }
+                }
+
+                if (distanceScores.Count > 0)
+                {
+                    int minDistance = distanceScores.Min(s => s.distance);
+                    candidates = distanceScores.Where(s => s.distance == minDistance).Select(s => s.player).ToList();
+                }
+            }
+
+            candidates = candidates.Distinct().ToList();
+
+            if (candidates.Count == 0)
+            {
+                errorResponse = $"Target Assignment Failed: No active player matching identifier literal '{identifier}' could be located.";
+                return false;
+            }
+
+            if (candidates.Count > 1)
+            {
+                errorResponse = $"Ambiguous Player Target. Multiple candidates matched '{identifier}' simultaneously:\n" +
+                                string.Join(", ", candidates.Select(p => $"{p.Nickname} (ID: {p.PlayerId})"));
+                return false;
+            }
+
+            target = candidates[0];
+            errorResponse = null;
+            return true;
+        }
     }
+    #endregion
+
 }

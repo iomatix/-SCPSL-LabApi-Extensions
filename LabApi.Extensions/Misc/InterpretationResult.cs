@@ -107,7 +107,7 @@ namespace LabApi.Extensions.Misc
                 var distanceScores = new List<(int index, int distance)>();
                 for (int i = 0; i < enumNames.Length; i++)
                 {
-                    int distance = ComputeLevenshteinDistance(cleanInput, enumNames[i].ToLowerInvariant());
+                    int distance = StringExtensions.ComputeLevenshteinDistance(cleanInput, enumNames[i].ToLowerInvariant());
                     // Allow soft variations (maximum of 3 typographic mutations allowed based on lengths)
                     if (distance <= 3 && distance < enumNames[i].Length - 2)
                     {
@@ -140,31 +140,6 @@ namespace LabApi.Extensions.Misc
             }
 
             return new InterpretationResult<T>(InterpretationStatus.NoMatchFound, default, null);
-        }
-
-        private static int ComputeLevenshteinDistance(string source, string target)
-        {
-            int n = source.Length;
-            int m = target.Length;
-            int[,] matrix = new int[n + 1, m + 1];
-
-            if (n == 0) return m;
-            if (m == 0) return n;
-
-            for (int i = 0; i <= n; matrix[i, 0] = i++) { }
-            for (int j = 0; j <= m; matrix[0, j] = j++) { }
-
-            for (int i = 1; i <= n; i++)
-            {
-                for (int j = 1; j <= m; j++)
-                {
-                    int cost = (target[j - 1] == source[i - 1]) ? 0 : 1;
-                    matrix[i, j] = Math.Min(
-                        Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
-                        matrix[i - 1, j - 1] + cost);
-                }
-            }
-            return matrix[n, m];
         }
     }
 }
