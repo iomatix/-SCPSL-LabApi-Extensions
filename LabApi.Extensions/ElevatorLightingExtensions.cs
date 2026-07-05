@@ -14,7 +14,7 @@
         public static void TurnOffLights(this Elevator elevator, float duration)
         {
             // Placeholder: Awaiting future integration with internal Lift light controllers/HDRP state managers.
-            Logger.Warn("ElevatorLighting", "TurnOffLights invoked on target. System operating in SafeZone mode (Lighing suppression deferred).");
+            Logger.LocalTrace("ElevatorLighting", "TurnOffLights invoked on target. System operating in SafeZone mode (Lighing suppression deferred).");
         }
 
         /// <summary>
