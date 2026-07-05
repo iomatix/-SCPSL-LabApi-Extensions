@@ -14,6 +14,97 @@ namespace LabApi.Extensions
     /// </summary>
     internal static class ElevatorExtensions
     {
+        #region Illumination Registry & State Trackers
+        /// <summary>
+        /// Thread-safe runtime registry storing instances of elevators currently trapped in total darkness
+        /// </summary>
+        private static readonly HashSet<int> _blackedOutElevators = new();
+        #endregion
+
+        #region Elevator Illumination Matrix (Anti-Desync Engine)
+        /// <summary>
+        /// Forcibly suppresses all physical and software-controlled light emission vectors inside the elevator cabin for a specific duration.
+        /// </summary>
+        /// <param name="elevator">The target <see cref="Elevator"/> instance undergoing cabin blackout.</param>
+        /// <param name="duration">The chronological duration window in seconds during which the cabin remains pitch black.</param>
+        public static void TurnOffLights(this Elevator elevator, float duration)
+        {
+            if (elevator?.Base == null) return;
+            int instanceId = elevator.Base.GetInstanceID();
+
+            lock (_blackedOutElevators)
+            {
+                _blackedOutElevators.Add(instanceId);
+            }
+
+            // Client-side visual sync: Deep-search and disable all rendering light components inside the active chamber structure
+            try
+            {
+                foreach (Light light in elevator.Base.GetComponentsInChildren<Light>(true))
+                {
+                    light.enabled = false;
+                }
+                foreach (MonoBehaviour fLight in elevator.Base.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    // Targets native game FlickerableLight components dynamically without tight assembly coupling
+                    if (fLight.GetType().Name == "FlickerableLight")
+                    {
+                        fLight.enabled = false;
+                    }
+                }
+            }
+            catch { /* Defensive safety isolation barrier */ }
+
+            // Automated thread-safe power restoration pipeline loop using MEC delay tokens
+            MEC.Timing.CallDelayed(duration, () => elevator.TurnOnLights());
+        }
+
+        /// <summary>
+        /// Restores standard electrical power and re-activates all internal illumination emitters inside the elevator cabin.
+        /// </summary>
+        /// <param name="elevator">The target <see cref="Elevator"/> instance undergoing light grid restoration.</param>
+        public static void TurnOnLights(this Elevator elevator)
+        {
+            if (elevator?.Base == null) return;
+            int instanceId = elevator.Base.GetInstanceID();
+
+            lock (_blackedOutElevators)
+            {
+                _blackedOutElevators.Remove(instanceId);
+            }
+
+            try
+            {
+                foreach (Light light in elevator.Base.GetComponentsInChildren<Light>(true))
+                {
+                    light.enabled = true;
+                }
+                foreach (MonoBehaviour fLight in elevator.Base.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (fLight.GetType().Name == "FlickerableLight")
+                    {
+                        fLight.enabled = true;
+                    }
+                }
+            }
+            catch { /* Defensive safety isolation barrier */ }
+        }
+
+        /// <summary>
+        /// Verifies whether the targeted elevator cabin is currently locked in an active blackout state loop.
+        /// </summary>
+        /// <param name="elevator">The source <see cref="Elevator"/> wrapper platform being polled.</param>
+        /// <returns><c>true</c> if the cabin lights are currently disabled logically; otherwise, <c>false</c>.</returns>
+        public static bool AreLightsOff(this Elevator elevator)
+        {
+            if (elevator?.Base == null) return false;
+            lock (_blackedOutElevators)
+            {
+                return _blackedOutElevators.Contains(elevator.Base.GetInstanceID());
+            }
+        }
+        #endregion
+
         #region Active Floor Operations (Safe State Mutators)
         /// <summary>
         /// Fluently opens ONLY the elevator doors located on the currently active floor level, preventing cross-floor safety exploits.

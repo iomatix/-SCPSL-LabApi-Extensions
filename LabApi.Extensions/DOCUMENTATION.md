@@ -607,9 +607,9 @@ public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe, and applies a localized probability-driven execution sweep to lock adjoining elevator pathway vectors.
+**Description:** Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe. Insulation Upgrade: Mechanical elevator door override routines removed to preserve Single Responsibility Principle (SRP).
 ```csharp
-public static void TurnOffLights(this Room room, float duration, float elevatorAffectChance = 0f)
+public static void TurnOffLights(this Room room, float duration)
 ```
 
 ### 🔹 `TurnOnLights()`
@@ -621,7 +621,7 @@ public static void TurnOnLights(this Room room, float flickerDuration = 0f)
 ### 🔹 `TurnOffRoomAndNeighborLights()`
 **Description:** Forcibly suppresses illumination across this room and all physically connected adjacent neighboring rooms simultaneously for a designated duration track.
 ```csharp
-public static void TurnOffRoomAndNeighborLights(this Room room, float duration, float elevatorAffectChance = 0f, bool forced = false)
+public static void TurnOffRoomAndNeighborLights(this Room room, float duration, bool forced = false)
 ```
 
 ### 🔹 `TurnOnRoomAndNeighborLights()`
