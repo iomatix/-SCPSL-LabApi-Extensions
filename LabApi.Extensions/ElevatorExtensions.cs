@@ -1,6 +1,7 @@
 ﻿using LabApi.Extensions.Misc;
 using LabApi.Features.Wrappers;
 using MapGeneration;
+using MEC;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,6 +89,85 @@ namespace LabApi.Extensions
                 }
             }
             catch { /* Defensive safety isolation barrier */ }
+        }
+
+        /// <summary>
+        /// Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Elevator"/> cabin space.
+        /// </summary>
+        /// <param name="elevator">The target elevator instance undergoing the internal visual strobe loop sequence.</param>
+        /// <param name="duration">The absolute total timeline duration track in seconds assigned for the animation layout.</param>
+        /// <param name="frequency">The frequency parameter enforcing strobe status state shifts per second.</param>
+        public static IEnumerator<float> FlickerElevatorLightsCoroutine(this Elevator elevator, float duration, float frequency)
+        {
+            if (elevator?.Base == null) yield break;
+
+            float interval = 1f / frequency.LimitMin(0.1f);
+            int flickers = (int)Math.Round(duration / interval);
+
+            Light[] lights = null;
+            List<MonoBehaviour> fLights = null;
+
+            // Step 1: Insulate components acquisition inside a safe initialization try-catch block
+            try
+            {
+                lights = elevator.Base.GetComponentsInChildren<Light>(true);
+                fLights = elevator.Base.GetComponentsInChildren<MonoBehaviour>(true)
+                    .Where(m => m != null && m.GetType().Name == "FlickerableLight").ToList();
+            }
+            catch (Exception ex)
+            {
+                LabApi.Extensions.Misc.iLogger.Error("ElevatorExtensions.FlickerInit", $"Failed to aggregate light components from elevator car structure: {ex.Message}");
+                yield break;
+            }
+
+            if (lights == null || fLights == null) yield break;
+
+            int lightsCount = lights.Length;
+            int fLightsCount = fLights.Count;
+
+            // Step 2: Run the animation loop. Try-catch blocks are isolated from 'yield return' statements to satisfy compiler constraints.
+            for (int i = 0; i < flickers; i++)
+            {
+                // Defensive check: If the elevator baseline transform is destroyed mid-coroutine, terminate instantly
+                if (elevator.Base == null) yield break;
+
+                try
+                {
+                    // High-performance allocation-free iteration loops wrapping state suppression
+                    for (int j = 0; j < lightsCount; j++)
+                    {
+                        if (lights[j] != null) lights[j].enabled = false;
+                    }
+
+                    for (int j = 0; j < fLightsCount; j++)
+                    {
+                        if (fLights[j] != null) fLights[j].enabled = false;
+                    }
+                }
+                catch { /* Suppress missing reference runtime destruction artifacts gracefully */ }
+
+                // Yield return is now legally invoked outside the try-catch matrix boundaries
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+
+                if (elevator.Base == null) yield break;
+
+                try
+                {
+                    // High-performance allocation-free iteration loops wrapping state restoration
+                    for (int j = 0; j < lightsCount; j++)
+                    {
+                        if (lights[j] != null) lights[j].enabled = true;
+                    }
+
+                    for (int j = 0; j < fLightsCount; j++)
+                    {
+                        if (fLights[j] != null) fLights[j].enabled = true;
+                    }
+                }
+                catch { /* Suppress missing reference runtime destruction artifacts gracefully */ }
+
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+            }
         }
 
         /// <summary>

@@ -323,5 +323,99 @@ namespace LabApi.Extensions
             return sqrDistance <= (radiusSize * radiusSize);
         }
         #endregion
+
+        #region Lighting Flicker Matrix (Animation Pipelines)
+        /// <summary>
+        /// Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Room"/> instance.
+        /// </summary>
+        /// <param name="room">The target room instance undergoing the visual flicker loop sequence.</param>
+        /// <param name="color">The target rendering illumination <see cref="Color"/> applied to the light nodes.</param>
+        /// <param name="duration">The absolute total timeline duration track in seconds assigned for the animation execution layout.</param>
+        /// <param name="frequency">The frequency coefficient tracking how many strobe status shifts execute per second.</param>
+        public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
+        {
+            if (room?.AllLightControllers == null) yield break;
+
+            // Defensive Boundary: Protect inverse interval math updates against sub-zero or zero division crashes
+            float interval = 1f / frequency.LimitMin(0.1f);
+            int flickers = (int)Math.Round(duration / interval);
+
+            room.SetLightsColor(color);
+            for (int i = 0; i < flickers; i++)
+            {
+                // Toggle off state using half frame intervals execution bounds
+                room.TurnOnLights(); // Ensure state tracking registers are fully updated
+                foreach (var controller in room.AllLightControllers) controller.LightsEnabled = false;
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+
+                // Toggle back onto standard operational coordinates
+                room.TurnOnLights();
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+            }
+            room.SetLightsColor(Color.clear);
+        }
+
+        /// <summary>
+        /// Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
+        /// </summary>
+        /// <param name="targetZone">The targeted facility sector zone quadrant undergoing power grid flicker animations.</param>
+        /// <param name="color">The structural <see cref="Color"/> spectrum applied to zone illumination grids.</param>
+        /// <param name="duration">The chronological tracking timeline window in seconds allocated for the animation loop.</param>
+        /// <param name="frequency">The velocity scaling frequency determining strobe repetitions per second.</param>
+        public static IEnumerator<float> FlickerZoneLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
+        {
+            float interval = 1f / frequency.LimitMin(0.1f);
+            int flickers = (int)Math.Round(duration / interval);
+
+            Map.SetColorOfLights(color, targetZone);
+            for (int i = 0; i < flickers; i++)
+            {
+                Map.TurnOffLights(interval * 0.5f, targetZone);
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+                Map.TurnOnLights(targetZone);
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+            }
+            Map.ResetColorOfLights(targetZone);
+        }
+
+        /// <summary>
+        /// Fluently executes a global or batch collection wide lighting flicker animation loop sequence spanning multiple rooms simultaneously.
+        /// </summary>
+        /// <param name="rooms">The enumerable stream collection tracking targeted room assets loaded inside server memory channels.</param>
+        /// <param name="color">The target rendering illumination <see cref="Color"/> matrix applied to the cluster layouts.</param>
+        /// <param name="duration">The absolute execution timeline width evaluated in fractional seconds.</param>
+        /// <param name="frequency">The frequency parameter enforcing execution cycle counts per second across the collection elements.</param>
+        public static IEnumerator<float> FlickerBulkLightsCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
+        {
+            if (rooms is null) yield break;
+
+            float interval = 1f / frequency.LimitMin(0.1f);
+            int flickers = (int)Math.Round(duration / interval);
+
+            // Capture and filter room listings to accelerate downstream loops without heap overhead allocation tracking
+            var cachedRooms = rooms.Where(r => r?.AllLightControllers != null).ToList();
+
+            foreach (var room in cachedRooms) room.SetLightsColor(color);
+
+            for (int i = 0; i < flickers; i++)
+            {
+                // Bulk suppression phase sweep execution paths
+                for (int r = 0; i < cachedRooms.Count; i++)
+                {
+                    foreach (var controller in cachedRooms[r].AllLightControllers) controller.LightsEnabled = false;
+                }
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+
+                // Bulk restoration phase sweep execution paths
+                for (int r = 0; i < cachedRooms.Count; i++)
+                {
+                    foreach (var controller in cachedRooms[r].AllLightControllers) controller.LightsEnabled = true;
+                }
+                yield return Timing.WaitForSeconds(interval * 0.5f);
+            }
+
+            foreach (var room in cachedRooms) room.SetLightsColor(Color.clear);
+        }
+        #endregion
     }
 }
