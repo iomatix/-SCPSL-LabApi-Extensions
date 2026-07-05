@@ -356,29 +356,6 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
-        /// </summary>
-        /// <param name="targetZone">The targeted facility sector zone quadrant undergoing power grid flicker animations.</param>
-        /// <param name="color">The structural <see cref="Color"/> spectrum applied to zone illumination grids.</param>
-        /// <param name="duration">The chronological tracking timeline window in seconds allocated for the animation loop.</param>
-        /// <param name="frequency">The velocity scaling frequency determining strobe repetitions per second.</param>
-        public static IEnumerator<float> FlickerZoneLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
-        {
-            float interval = 1f / frequency.LimitMin(0.1f);
-            int flickers = (int)Math.Round(duration / interval);
-
-            Map.SetColorOfLights(color, targetZone);
-            for (int i = 0; i < flickers; i++)
-            {
-                Map.TurnOffLights(interval * 0.5f, targetZone);
-                yield return Timing.WaitForSeconds(interval * 0.5f);
-                Map.TurnOnLights(targetZone);
-                yield return Timing.WaitForSeconds(interval * 0.5f);
-            }
-            Map.ResetColorOfLights(targetZone);
-        }
-
-        /// <summary>
         /// Fluently executes a global or batch collection wide lighting flicker animation loop sequence spanning multiple rooms simultaneously.
         /// </summary>
         /// <param name="rooms">The enumerable stream collection tracking targeted room assets loaded inside server memory channels.</param>

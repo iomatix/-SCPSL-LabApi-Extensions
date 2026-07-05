@@ -702,12 +702,6 @@ public static bool IsWithinRadius(this Room room, Vector3 position, float radius
 public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
 ```
 
-### 🔹 `FlickerZoneLightsCoroutine()`
-**Description:** Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
-```csharp
-public static IEnumerator<float> FlickerZoneLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
-```
-
 ### 🔹 `FlickerBulkLightsCoroutine()`
 **Description:** Fluently executes a global or batch collection wide lighting flicker animation loop sequence spanning multiple rooms simultaneously.
 ```csharp
