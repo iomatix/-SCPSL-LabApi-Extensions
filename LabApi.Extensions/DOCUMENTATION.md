@@ -129,7 +129,19 @@ public static void Toggle(this Door door)
 ### 🔹 `WhereNameIn()`
 **Description:** Filters a sequence of doors to return only those matching any of the specified <see cref="DoorName"/> layout tokens.
 ```csharp
-public static System.Collections.Generic.IEnumerable<Door> WhereNameIn(this System.Collections.Generic.IEnumerable<Door> doors, params DoorName[] names)
+public static IEnumerable<Door> WhereNameIn(this IEnumerable<Door> doors, params DoorName[] names)
+```
+
+### 🔹 `Open()`
+**Description:** Fluently unseals an individual door instance, driving its structural passage topology state to open.
+```csharp
+public static void Open(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: true, bypassLocks);
+```
+
+### 🔹 `Close()`
+**Description:** Fluently seals an individual door instance, driving its structural passage topology state to closed.
+```csharp
+public static void Close(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: false, bypassLocks);
 ```
 
 ### 🔹 `SetLockState()`
@@ -148,6 +160,18 @@ public static void SetOpenState(this Door door, bool opened, bool bypassLocks = 
 **Description:** Forcibly unseals an individual door and applies an administrative server-side lock state under a specific structural reason constraint.
 ```csharp
 public static void OpenAndLock(this Door door, DoorLockReason reason, bool playSound = true)
+```
+
+### 🔹 `Open()`
+**Description:** Attempts to mass unseal an aggregated collection sequence of doors cleanly.
+```csharp
+public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: true, bypassLocks);
+```
+
+### 🔹 `Close()`
+**Description:** Attempts to mass seal an aggregated collection sequence of doors cleanly.
+```csharp
+public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: false, bypassLocks);
 ```
 
 ### 🔹 `SetLockState()`
@@ -194,10 +218,28 @@ public static void EnableEffect(this Player player, FacilityEffectType effect, b
 
 ## 📦 Class: ElevatorExtensions
 
+### 🔹 `OpenActiveDoors()`
+**Description:** Fluently opens ONLY the elevator doors located on the currently active floor level, preventing cross-floor safety exploits.
+```csharp
+public static void OpenActiveDoors(this Elevator elevator, bool bypassLocks = false)
+```
+
+### 🔹 `CloseActiveDoors()`
+**Description:** Fluently closes ONLY the elevator doors located on the currently active floor level.
+```csharp
+public static void CloseActiveDoors(this Elevator elevator, bool bypassLocks = false)
+```
+
 ### 🔹 `GetElevatorsInZone()`
 **Description:** Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
 ```csharp
 public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
+```
+
+### 🔹 `GetElevatorsConnectedToRoom()`
+**Description:** Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
+```csharp
+public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
 ```
 
 ### 🔹 `IsActiveInRoom()`
@@ -206,10 +248,10 @@ public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
 public static bool IsActiveInRoom(this Room room)
 ```
 
-### 🔹 `GetElevatorsConnectedToRoom()`
-**Description:** Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
+### 🔹 `IsInExecutiveElevator()`
+**Description:** Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
 ```csharp
-public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+public static bool IsInExecutiveElevator(this Player player)
 ```
 
 ### 🔹 `LockElevatorsInZone()`
@@ -222,12 +264,6 @@ public static void LockElevatorsInZone(FacilityZone zone)
 **Description:** Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone.
 ```csharp
 public static void UnlockElevatorsInZone(FacilityZone zone)
-```
-
-### 🔹 `IsInExecutiveElevator()`
-**Description:** Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
-```csharp
-public static bool IsInExecutiveElevator(this Player player)
 ```
 
 ### 🔹 `HandleElevatorsForRoom()`

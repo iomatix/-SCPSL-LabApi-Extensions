@@ -133,13 +133,12 @@ namespace LabApi.Extensions
 
         #region Lighting Overrides
         /// <summary>
-        /// Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe, 
-        /// and applies a localized probability-driven execution sweep to lock adjoining elevator pathway vectors.
+        /// Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe.
+        /// Insulation Upgrade: Mechanical elevator door override routines removed to preserve Single Responsibility Principle (SRP).
         /// </summary>
         /// <param name="room">The target <see cref="Room"/> spatial context where the environmental illumination override is executed.</param>
         /// <param name="duration">The execution lifespan timeframe measured in seconds during which the light suppression grid remains active.</param>
-        /// <param name="elevatorAffectChance">The fractional probability value constraint percentage checked prior to executing elevator bulkhead passage suppression.</param>
-        public static void TurnOffLights(this Room room, float duration, float elevatorAffectChance = 0f)
+        public static void TurnOffLights(this Room room, float duration)
         {
             if (room?.AllLightControllers == null) return;
 
@@ -147,15 +146,6 @@ namespace LabApi.Extensions
             {
                 controller.FlickerLights(duration);
             }
-
-            room.HandleElevatorsForRoom(elevatorAffectChance, duration, elevator =>
-            {
-                elevator.Doors.Close();
-                elevator.LockAllDoors();
-
-                var coroutine = Timing.CallDelayed(duration, () => { elevator.UnlockAllDoors(); elevator.Doors.Open(); });
-                coroutine.Tag = "LabApiExtensions-ElevatorUnlock";
-            });
         }
 
         /// <summary>
@@ -182,17 +172,16 @@ namespace LabApi.Extensions
         /// </summary>
         /// <param name="room">The root room anchor node executing the multi-sector blackout cascade.</param>
         /// <param name="duration">The operational execution lifespan measured in seconds during which the light grids stay unpowered.</param>
-        /// <param name="elevatorAffectChance">The fractional probability value constraint checked prior to locking adjacent elevator pathway doors.</param>
         /// <param name="forced">A defensive safety toggle bypass flag to force processing overrides regardless of structural sub-states.</param>
-        public static void TurnOffRoomAndNeighborLights(this Room room, float duration, float elevatorAffectChance = 0f, bool forced = false)
+        public static void TurnOffRoomAndNeighborLights(this Room room, float duration, bool forced = false)
         {
             if (room is null) return;
 
-            room.TurnOffLights(duration, elevatorAffectChance);
+            room.TurnOffLights(duration);
 
             foreach (Room neighbor in room.GetNeighbors())
             {
-                neighbor.TurnOffLights(duration, elevatorAffectChance);
+                neighbor.TurnOffLights(duration);
             }
         }
 
