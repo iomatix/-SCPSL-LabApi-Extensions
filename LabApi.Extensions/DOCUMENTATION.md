@@ -200,10 +200,10 @@ public static void EnableEffect(this Player player, FacilityEffectType effect, b
 public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
 ```
 
-### 🔹 `IsElevatorActiveInRoom()`
+### 🔹 `IsActiveInRoom()`
 **Description:** Evaluates whether any elevator infrastructure bound to the specified room is actively executing a mechanical movement sequence.
 ```csharp
-public static bool IsElevatorActiveInRoom(this Room room)
+public static bool IsActiveInRoom(this Room room)
 ```
 
 ### 🔹 `GetElevatorsConnectedToRoom()`
@@ -552,10 +552,10 @@ public static bool IsScpRoom(this RoomName roomName) => roomName is RoomName.Lcz
 public static bool IsArmory(this RoomName roomName) => roomName is RoomName.LczArmory or RoomName.HczArmory;
 ```
 
-### 🔹 `IsRoomFreeOfEngagedGenerators()`
+### 🔹 `IsFreeOfEngagedGenerators()`
 **Description:** Verifies defensively if the target <see cref="Room"/> spatial zone is completely free of any power generators that are currently in an active, fully engaged state.
 ```csharp
-public static bool IsRoomFreeOfEngagedGenerators(this Room room)
+public static bool IsFreeOfEngagedGenerators(this Room room)
 ```
 
 ### 🔹 `IsRoomAndNeighborsFreeOfEngagedGenerators()`
