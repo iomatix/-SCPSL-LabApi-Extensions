@@ -230,6 +230,12 @@ public static void TurnOffLights(this Elevator elevator, float duration)
 public static void TurnOnLights(this Elevator elevator)
 ```
 
+### 🔹 `FlickerElevatorLightsCoroutine()`
+**Description:** Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Elevator"/> cabin space.
+```csharp
+public static IEnumerator<float> FlickerElevatorLightsCoroutine(this Elevator elevator, float duration, float frequency)
+```
+
 ### 🔹 `AreLightsOff()`
 **Description:** Verifies whether the targeted elevator cabin is currently locked in an active blackout state loop.
 ```csharp
@@ -690,6 +696,24 @@ public static float GetDistanceTo(this Room room, Vector3 position)
 public static bool IsWithinRadius(this Room room, Vector3 position, float radiusSize)
 ```
 
+### 🔹 `FlickerLightsCoroutine()`
+**Description:** Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Room"/> instance.
+```csharp
+public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
+```
+
+### 🔹 `FlickerZoneLightsCoroutine()`
+**Description:** Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
+```csharp
+public static IEnumerator<float> FlickerZoneLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
+```
+
+### 🔹 `FlickerBulkLightsCoroutine()`
+**Description:** Fluently executes a global or batch collection wide lighting flicker animation loop sequence spanning multiple rooms simultaneously.
+```csharp
+public static IEnumerator<float> FlickerBulkLightsCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
+```
+
 ---
 
 ## 📦 Class: StringExtensions
@@ -794,6 +818,28 @@ public static UnityEngine.Vector3 GetRandomUpwardSphereVelocity(float magnitude 
 **Description:** Defensively audits all float components of a 3D vector against structural corruption anomalies (NaN or Infinity parameters).
 ```csharp
 public static UnityEngine.Vector3 Sanitize(this UnityEngine.Vector3 vector, UnityEngine.Vector3 fallback = default)
+```
+
+---
+
+## 📦 Class: ZoneExtensions
+
+### 🔹 `TurnOffZoneLights()`
+**Description:** Forcibly suppresses all layout light controllers and connected elevator cabins across an entire facility zone for a designated duration.
+```csharp
+public static void TurnOffZoneLights(this FacilityZone zone, float duration)
+```
+
+### 🔹 `TurnOnZoneLights()`
+**Description:** Instantly restores electrical power to all light controllers and connected elevator cabins across a specific facility zone.
+```csharp
+public static void TurnOnZoneLights(this FacilityZone zone)
+```
+
+### 🔹 `FlickerZoneLightsCoroutine()`
+**Description:** Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
+```csharp
+public static IEnumerator<float> FlickerZoneLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
 ```
 
 ---
