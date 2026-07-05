@@ -23,6 +23,18 @@ namespace LabApi.Extensions.Plugin
         }
 
         /// <summary>
+        /// Initiates a fluent orchestration builder instance for the specified plugin context with inferred type metrics.
+        /// </summary>
+        /// <typeparam name="TConfig">The primary configuration layout type resolved by the compiler.</typeparam>
+        /// <param name="plugin">The live framework plugin context instance.</param>
+        /// <returns>A pristine <see cref="PluginBuilder{TConfig}"/> orchestration context.</returns>
+        public static PluginBuilder<TConfig> Create<TConfig>(Plugin<TConfig> plugin)
+            where TConfig : LabApiConfig, new()
+        {
+            return new PluginBuilder<TConfig>(plugin);
+        }
+
+        /// <summary>
         /// Dynamically loads, validates, and binds a decentralized sub-configuration file to the plugin ecosystem.
         /// </summary>
         /// <typeparam name="TSubConfig">The target modular sub-configuration class type being loaded.</typeparam>
