@@ -4,7 +4,6 @@ using MapGeneration;
 using MEC;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LabApi.Extensions
@@ -30,7 +29,15 @@ namespace LabApi.Extensions
         /// <returns>A sequence of doors located inside the targeted zone.</returns>
         public static IEnumerable<Door> GetDoors(this FacilityZone zone)
         {
-            return Room.List.Where(room => room is not null && room.Zone == zone).SelectMany(room => room.Doors);
+            foreach (Room room in Room.List)
+            {
+                if (room is null || room.Zone != zone || room.Doors is null) continue;
+
+                foreach (Door door in room.Doors)
+                {
+                    yield return door;
+                }
+            }
         }
 
         /// <summary>

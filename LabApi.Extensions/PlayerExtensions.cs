@@ -113,9 +113,6 @@ namespace LabApi.Extensions
         /// <summary>
         /// Computes the precise linear Euclidean distance between the target player's current spatial coordinates and a specified 3D position vector.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance executing the spatial distance calculation.</param>
-        /// <param name="position">The target <see cref="Vector3"/> spatial coordinates vector checked inside the active simulation workspace.</param>
-        /// <returns>A single-precision floating-point scalar value representing the calculated physical distance in meters; otherwise, <c>0f</c> if structural dependencies evaluate to null.</returns>
         public static float GetDistanceTo(this Player player, Vector3 position)
         {
             if (player?.GameObject == null) return 0f;
@@ -125,14 +122,10 @@ namespace LabApi.Extensions
         /// <summary>
         /// Evaluates defensively whether the specified player is positioned within a concrete linear maximum distance radius from a target spatial coordinate vector.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance tracked for spatial proximity validation.</param>
-        /// <param name="position">The target destination <see cref="Vector3"/> coordinates vector evaluated for proximity boundaries.</param>
-        /// <param name="maxDistance">The maximum physical radius limit coefficient allowed for positive structural validation.</param>
-        /// <returns><c>true</c> if the player entity is verified within the designated distance radius; otherwise, <c>false</c>.</returns>
         public static bool IsWithinDistance(this Player player, Vector3 position, float maxDistance)
         {
             if (player?.GameObject == null) return false;
-            return Vector3.Distance(player.Position, position) <= maxDistance;
+            return (player.Position - position).sqrMagnitude <= (maxDistance * maxDistance);
         }
         #endregion
 
@@ -259,29 +252,24 @@ namespace LabApi.Extensions
             if (player?.GameObject is null) return false;
 
             Elevator currentCabin = null;
+            const float maxCabinRadiusSqr = 4.5f * 4.5f;
 
-            // STAGE 1: High-performance boundary sweep across all global lifts using a secure spatial radius matrix.
-            // Using a clean foreach loop over Elevator.List bypasses indexer limitations on read-only collections seamlessly.
             foreach (Elevator elevator in Elevator.List)
             {
                 if (elevator?.Base?.transform is null) continue;
 
-                // 4.5 meters spatial radius safely encapsulates the entire physical volume envelope of any active lift cabin primitive
-                if (Vector3.Distance(player.Position, elevator.Base.transform.position) <= 4.5f)
+                if ((player.Position - elevator.Base.transform.position).sqrMagnitude <= maxCabinRadiusSqr)
                 {
                     currentCabin = elevator;
                     break;
                 }
             }
 
-            // STAGE 2: Resolve state based on active spatial domain discovered
             if (currentCabin is not null)
             {
-                // Inside an active lift cabin: illumination is strictly dictated by the independent lift's hardware power loop
                 return currentCabin.AreLightsOff();
             }
 
-            // STAGE 3: Default spatial domain fallback layer targeting standard facility room illumination maps
             return player.IsInDarkRoom();
         }
 
@@ -295,9 +283,6 @@ namespace LabApi.Extensions
             Room room = player?.Room;
             if (room?.AllLightControllers is null) return false;
 
-            // MASTER-LEVEL ARCHITECTURE ALIGNMENT:
-            // Replaced fragile indexing over IEnumerable collection with a zero-allocation foreach iterator block.
-            // Resolves compiler errors regarding method groups and missing array indexing layout interfaces.
             foreach (var controller in room.AllLightControllers)
             {
                 if (controller is not null && controller.LightsEnabled)
@@ -353,70 +338,45 @@ namespace LabApi.Extensions
 
         #region Collection Query Extensions
         /// <summary>
-        /// Filters an enumerable collection layout stream of players utilizing high-performance lazy execution 
-        /// to yield exclusively active, ready human subjects who are currently alive in the current round lifecycle.
+        /// Filters an enumerable collection layout stream of players to yield exclusively active, ready human subjects who are currently alive.
         /// </summary>
         /// <param name="players">The source enumerable collection tracking global or localized player entity matrix blocks.</param>
         /// <returns>An evaluated historical sequence iteration tracking only verified active and alive <see cref="Player"/> instances.</returns>
         public static IEnumerable<Player> WhereAlive(this IEnumerable<Player> players)
         {
             if (players == null) yield break;
-
             foreach (Player player in players)
             {
-                if (player != null && player.IsReady && player.IsAlive)
-                {
-                    yield return player;
-                }
+                if (player != null && player.IsReady && player.IsAlive) yield return player;
             }
         }
 
         /// <summary>
-        /// Filters an enumerable collection layout stream of players utilizing high-performance lazy execution 
-        /// to yield exclusively player subjects belonging to human factions.
+        /// Filters an enumerable collection layout stream of players utilizing high-performance lazy execution to yield exclusively human subjects.
         /// </summary>
         /// <param name="players">The source collection of player entities to undergo faction filtration.</param>
         /// <returns>A filtered enumerable sequence layout containing only human player entities.</returns>
-        public static System.Collections.Generic.IEnumerable<Player> WhereHuman(this System.Collections.Generic.IEnumerable<Player> players)
+        public static IEnumerable<Player> WhereHuman(this IEnumerable<Player> players)
         {
-            if (players == null)
-            {
-                return System.Linq.Enumerable.Empty<Player>();
-            }
-
-            System.Collections.Generic.List<Player> filtered = new System.Collections.Generic.List<Player>();
+            if (players == null) yield break;
             foreach (Player player in players)
             {
-                if (player != null && player.IsHuman)
-                {
-                    filtered.Add(player);
-                }
+                if (player != null && player.IsHuman) yield return player;
             }
-            return filtered;
         }
 
         /// <summary>
-        /// Filters an enumerable collection layout stream of players to insulate the pipeline against subjects 
-        /// currently trapped inside the low-level execution bounds of SCP-106's Pocket Dimension.
+        /// Filters an enumerable collection layout stream of players to insulate the pipeline against subjects currently inside the Pocket Dimension.
         /// </summary>
         /// <param name="players">The source collection of player entities checked for spatial dimension parameters.</param>
         /// <returns>A filtered enumerable sequence layout containing players outside the pocket dimension zone.</returns>
-        public static System.Collections.Generic.IEnumerable<Player> WhereNotInPocket(this System.Collections.Generic.IEnumerable<Player> players)
+        public static IEnumerable<Player> WhereNotInPocket(this IEnumerable<Player> players)
         {
-            if (players == null)
-            {
-                return System.Linq.Enumerable.Empty<Player>();
-            }
-
-            System.Collections.Generic.List<Player> filtered = new System.Collections.Generic.List<Player>();
+            if (players == null) yield break;
             foreach (Player player in players)
             {
-                if (player != null && player.Room != null && player.Room.Name != RoomName.Pocket)
-                {
-                    filtered.Add(player);
-                }
+                if (player != null && player.Room?.Name != RoomName.Pocket) yield return player;
             }
-            return filtered;
         }
         #endregion
 

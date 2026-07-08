@@ -3,19 +3,11 @@ using LabApi.Extensions.Misc;
 using LabApi.Features.Wrappers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace LabApi.Extensions
 {
-    /// <summary>
-    /// Provides an enterprise-grade decoupled management matrix controlling speech synthesizer payloads, 
-    /// real-time custom subtitle distribution pipelines, and multi-track duration timeline aggregation.
-    /// </summary>
     public static class CassieExtensions
     {
-        /// <summary>
-        /// Flushes the current real-time vocal audio broadcast queue entirely, instantly suspending any ongoing audio playback.
-        /// </summary>
         public static void CassieClear() => Announcer.Clear();
 
         /// <summary>
@@ -26,12 +18,7 @@ namespace LabApi.Extensions
         /// <returns>A fully sanitized, single-line phonetic string ready for speech synthesis engines.</returns>
         public static string SanitizeCassieString(this string rawMessage)
         {
-            if (string.IsNullOrWhiteSpace(rawMessage))
-            {
-                return string.Empty;
-            }
-
-            // Clears hidden YAML formatting characters (\r\n) to safeguard native speech synthesis processors against thread choking artifacts
+            if (string.IsNullOrWhiteSpace(rawMessage)) return string.Empty;
             return rawMessage.Replace("\r", "").Replace("\n", " ").Trim();
         }
 
@@ -46,7 +33,6 @@ namespace LabApi.Extensions
         /// <returns>The precise runtime track width duration metric measured in fractional seconds; otherwise, 0.0 on execution failure.</returns>
         public static double Cassie_GlitchyMessage(string message, float glitchChance, float jamChance, string glitchifierOutput)
         {
-            // DRY Upgrade: Cleanse the internal glitch output parameter before pushing onto the audio pipeline context
             string sanitizedOutput = glitchifierOutput.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedOutput)) return 0.0;
 
@@ -54,15 +40,12 @@ namespace LabApi.Extensions
             {
                 CassiePlaybackModifiers playbackModifiers = default;
                 playbackModifiers.Pitch = 0.95f;
-
-                string finalPayload = $"pitch_0.95 {sanitizedOutput}";
-                Announcer.Message(finalPayload, string.Empty, playBackground: false);
-
+                Announcer.Message($"pitch_0.95 {sanitizedOutput}", string.Empty, playBackground: false);
                 return Announcer.CalculateDuration(sanitizedOutput, playbackModifiers);
             }
             catch (Exception ex)
             {
-                iLogger.Error("Cassie.GlitchyMessage", $"Vocal grid runtime suspension tracking anomaly caught: {ex.Message}");
+                iLogger.Error("Cassie.GlitchyMessage", $"Vocal grid runtime suspension anomaly: {ex.Message}");
                 return 0.0;
             }
         }
@@ -74,7 +57,6 @@ namespace LabApi.Extensions
         /// <returns>The computed execution track timeline width evaluated in seconds; otherwise, 0.0 if an anomaly is intercepted.</returns>
         public static double Cassie_Message(string message)
         {
-            // DRY Upgrade: Enforce clean, format-safe strings right at the threshold of public audio broadcasts
             string sanitizedMessage = message.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedMessage)) return 0.0;
 
@@ -82,15 +64,12 @@ namespace LabApi.Extensions
             {
                 CassiePlaybackModifiers playbackModifiers = default;
                 playbackModifiers.Pitch = 1.05f;
-
-                string finalPayload = $"pitch_1.05 {sanitizedMessage}";
-                Announcer.Message(finalPayload, string.Empty, playBackground: false);
-
+                Announcer.Message($"pitch_1.05 {sanitizedMessage}", string.Empty, playBackground: false);
                 return Announcer.CalculateDuration(sanitizedMessage, playbackModifiers);
             }
             catch (Exception ex)
             {
-                iLogger.Error("Cassie.Message", $"Vocal pipeline delivery grid critical failure handled: {ex.Message}");
+                iLogger.Error("Cassie.Message", $"Vocal pipeline critical failure: {ex.Message}");
                 return 0.0;
             }
         }
@@ -107,7 +86,6 @@ namespace LabApi.Extensions
         /// <param name="disableMessages">Defensive toggle bypass to suppress contextual subtitle generation arrays if evaluation bounds are met.</param>
         public static void ProcessAndDispatchMessage(string message, string customSubtitles, bool shouldClear, string pitchModifier, float priority, bool disableMessages = false)
         {
-            // DRY Upgrade: Intercept both transmission payload tracks and cleanse them simultaneously natively
             string sanitizedMessage = message.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedMessage)) return;
 
@@ -117,9 +95,7 @@ namespace LabApi.Extensions
             string processedSubtitles = (!string.IsNullOrEmpty(sanitizedSubtitles) && !disableMessages) ? sanitizedSubtitles : string.Empty;
             string cleanPitch = string.IsNullOrWhiteSpace(pitchModifier) ? "pitch_1.0" : pitchModifier.Trim();
 
-            string fullMessage = $"{cleanPitch} {sanitizedMessage}";
-
-            Announcer.Message(fullMessage, customSubtitles: processedSubtitles, priority: priority, playBackground: false);
+            Announcer.Message($"{cleanPitch} {sanitizedMessage}", customSubtitles: processedSubtitles, priority: priority, playBackground: false);
         }
 
         /// <summary>
@@ -131,7 +107,6 @@ namespace LabApi.Extensions
         /// <returns>A fully synchronized, ready-to-broadcast phonetic CASSIE phrase format configuration string.</returns>
         public static string ToCassieCountdown(this int notifyTime, string alertContext = "Seconds until Event Detonation")
         {
-            // DRY Upgrade: Sanitize contextual extensions inputs to protect generation maps natively
             string sanitizedContext = alertContext.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedContext)) sanitizedContext = "Seconds";
 
@@ -149,7 +124,6 @@ namespace LabApi.Extensions
         /// <returns>A precise double floating-point scalar evaluation reflecting the calculated operational track length in seconds.</returns>
         public static double CalculateCassieMessageDuration(string message, double speed = 0.95)
         {
-            // DRY Upgrade: Guarantee underlying timing trackers process clean metrics free of formatting noise
             string sanitizedMessage = message.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedMessage)) return 0.0;
 
@@ -158,41 +132,70 @@ namespace LabApi.Extensions
             return Announcer.CalculateDuration(sanitizedMessage, modifiers);
         }
 
-        #region Aggregation Overhead Loops
+        #region Aggregation Overhead Loops (Zero-Allocation Internal Implementations)
         /// <summary>
-        /// Iteratively aggregates and computes the total unified summation timeline bounds for a collection layout dictionary 
-        /// mapping asynchronous text phrases to explicit local frequency speed bounds.
+        /// Aggregates and computes total durations avoiding allocation-heavy LINQ structure parsing.
         /// </summary>
-        /// <param name="messageSpeedDictionary">A concrete dictionary data matrix linking specific vocal scripts to execution tracking speeds.</param>
-        /// <returns>The cumulative total tracking duration required to execute the entire matrix collection sequentially.</returns>
         public static double CalculateTotalMessagesDurations(IDictionary<string, float> messageSpeedDictionary)
         {
-            return messageSpeedDictionary.Sum(kvp => CalculateCassieMessageDuration(kvp.Key, kvp.Value));
+            if (messageSpeedDictionary is null || messageSpeedDictionary.Count == 0) return 0.0;
+
+            double cumulativeDuration = 0.0;
+            if (messageSpeedDictionary is Dictionary<string, float> concreteDict)
+            {
+                foreach (var kvp in concreteDict)
+                {
+                    cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, kvp.Value);
+                }
+                return cumulativeDuration;
+            }
+
+            foreach (var kvp in messageSpeedDictionary)
+            {
+                cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, kvp.Value);
+            }
+            return cumulativeDuration;
         }
 
         /// <summary>
-        /// Aggregates linear string data collections and determines their absolute runtime playback footprints 
-        /// utilizing a uniform fixed structural fallback speed index.
+        /// Aggregates linear collection playback footprints over a zero-allocation sequential iteration map.
         /// </summary>
-        /// <param name="messages">An enumerable collection tracking clean sequence phrases targeting the translation engine.</param>
-        /// <param name="defaultSpeed">The standardized static speed parameter applied across all collection elements.</param>
-        /// <returns>The global unified length duration evaluated across the aggregated sequence layout array bounds.</returns>
         public static double CalculateTotalMessagesDurations(IEnumerable<string> messages, float defaultSpeed = 1f)
         {
-            return messages.Sum(message => CalculateCassieMessageDuration(message, defaultSpeed));
+            if (messages is null) return 0.0;
+
+            double cumulativeDuration = 0.0;
+            if (messages is List<string> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    cumulativeDuration += CalculateCassieMessageDuration(concreteList[i], defaultSpeed);
+                }
+                return cumulativeDuration;
+            }
+
+            foreach (string message in messages)
+            {
+                cumulativeDuration += CalculateCassieMessageDuration(message, defaultSpeed);
+            }
+            return cumulativeDuration;
         }
 
         /// <summary>
-        /// High-performance params collection inline overloading layer designed to process inline string listings 
-        /// and capture cumulative timeline tracks without manual collection allocations.
+        /// High-performance overload routing parameters sequentially directly into structural loop wrappers.
         /// </summary>
-        /// <param name="defaultSpeed">The unform speed coefficient factor applied to each argument node string text block.</param>
-        /// <param name="messages">An expandable parameter array sequence capturing raw string blocks sequentially passed via method boundaries.</param>
-        /// <returns>The aggregated total timeline calculation output track tracking all parameters.</returns>
-        public static double CalculateTotalMessagesDurations(float defaultSpeed = 1f, params string[] messages)
+        public static double CalculateTotalMessagesDurations(float defaultSpeed, params string[] messages)
         {
-            // Explicit array conversion redirection to avoid allocations inside iteration structures
-            return CalculateTotalMessagesDurations((IEnumerable<string>)messages, defaultSpeed);
+            if (messages is null || messages.Length == 0) return 0.0;
+
+            double cumulativeDuration = 0.0;
+            int count = messages.Length;
+            for (int i = 0; i < count; i++)
+            {
+                cumulativeDuration += CalculateCassieMessageDuration(messages[i], defaultSpeed);
+            }
+            return cumulativeDuration;
         }
         #endregion
     }

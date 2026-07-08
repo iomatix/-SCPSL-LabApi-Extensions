@@ -3,7 +3,6 @@ using LabApi.Features.Wrappers;
 using MapGeneration;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace LabApi.Extensions
 {
@@ -85,8 +84,23 @@ namespace LabApi.Extensions
         /// <returns>An enumerable collection containing all matching <see cref="Elevator"/> units intersecting the target layout zone bounds.</returns>
         public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
         {
-            return Elevator.List.Where(elevator =>
-                elevator.CurrentDestination.Rooms.Any(room => Room.Get(room.Base)?.Zone == zone));
+            foreach (Elevator elevator in Elevator.List)
+            {
+                var destinationRooms = elevator?.CurrentDestination?.Rooms;
+                if (destinationRooms is null) continue;
+
+                bool zoneMatched = false;
+                foreach (var r in destinationRooms)
+                {
+                    if (Room.Get(r.Base)?.Zone == zone)
+                    {
+                        zoneMatched = true;
+                        break;
+                    }
+                }
+
+                if (zoneMatched) yield return elevator;
+            }
         }
 
         /// <summary>
@@ -96,8 +110,15 @@ namespace LabApi.Extensions
         /// <returns>An enumerable sequence tracking matching elevator units linked directly to the specified layout node mapping.</returns>
         public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
         {
-            if (room == null) return Enumerable.Empty<Elevator>();
-            return Elevator.List.Where(elevator => elevator.CurrentDestination?.Rooms.Contains(room) == true);
+            if (room is null) yield break;
+
+            foreach (Elevator elevator in Elevator.List)
+            {
+                if (elevator?.CurrentDestination?.Rooms?.Contains(room) == true)
+                {
+                    yield return elevator;
+                }
+            }
         }
         #endregion
 
@@ -109,11 +130,17 @@ namespace LabApi.Extensions
         /// <returns><c>true</c> if an elevator is bound to the room and currently processing an active mechanical cycle; otherwise, <c>false</c>.</returns>
         public static bool IsActiveInRoom(this Room room)
         {
-            if (room == null) return false;
+            if (room is null) return false;
 
-            return Elevator.List.Any(elevator =>
-                elevator.CurrentDestination.Rooms.Contains(room) &&
-                elevator.CurrentSequence != Interactables.Interobjects.ElevatorChamber.ElevatorSequence.Ready);
+            foreach (Elevator elevator in Elevator.List)
+            {
+                if (elevator?.CurrentDestination?.Rooms?.Contains(room) == true &&
+                    elevator.CurrentSequence != Interactables.Interobjects.ElevatorChamber.ElevatorSequence.Ready)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -123,10 +150,15 @@ namespace LabApi.Extensions
         /// <returns><c>true</c> if the player entity is verified inside an elevator room boundary; otherwise, <c>false</c>.</returns>
         public static bool IsInExecutiveElevator(this Player player)
         {
-            var pRoom = player?.Room;
-            if (pRoom == null) return false;
+            Room pRoom = player?.Room;
+            if (pRoom is null) return false;
 
-            return Elevator.List.Any(elevator => elevator.CurrentDestination.Rooms.Contains(pRoom));
+            foreach (Elevator elevator in Elevator.List)
+            {
+                if (elevator?.CurrentDestination?.Rooms?.Contains(pRoom) == true)
+                    return true;
+            }
+            return false;
         }
         #endregion
 
