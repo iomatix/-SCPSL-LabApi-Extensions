@@ -336,20 +336,35 @@ namespace LabApi.Extensions
         {
             if (room?.AllLightControllers == null) yield break;
 
-            // Defensive Boundary: Protect inverse interval math updates against sub-zero or zero division crashes
             float interval = 1f / frequency.LimitMin(0.1f);
             int flickers = (int)Math.Round(duration / interval);
 
             room.SetLightsColor(color);
+
+            // Performance Optimization: Cache IEnumerable to array ONCE before entering the time-critical loop
+            var controllers = System.Linq.Enumerable.ToArray(room.AllLightControllers);
+            int controllerCount = controllers.Length;
+
             for (int i = 0; i < flickers; i++)
             {
-                // Toggle off state using half frame intervals execution bounds
-                room.TurnOnLights(); // Ensure state tracking registers are fully updated
-                foreach (var controller in room.AllLightControllers) controller.LightsEnabled = false;
+                room.TurnOnLights();
+
+                for (int c = 0; c < controllerCount; c++)
+                {
+                    if (controllers[c] != null)
+                    {
+                        controllers[c].LightsEnabled = false;
+                    }
+                }
                 yield return Timing.WaitForSeconds(interval * 0.5f);
 
-                // Toggle back onto standard operational coordinates
-                room.TurnOnLights();
+                for (int c = 0; c < controllerCount; c++)
+                {
+                    if (controllers[c] != null)
+                    {
+                        controllers[c].LightsEnabled = true;
+                    }
+                }
                 yield return Timing.WaitForSeconds(interval * 0.5f);
             }
             room.SetLightsColor(Color.clear);
@@ -369,29 +384,53 @@ namespace LabApi.Extensions
             float interval = 1f / frequency.LimitMin(0.1f);
             int flickers = (int)Math.Round(duration / interval);
 
-            // Capture and filter room listings to accelerate downstream loops without heap overhead allocation tracking
-            var cachedRooms = rooms.Where(r => r?.AllLightControllers != null).ToList();
+            // Allocation Optimization: Multi-dimensional flattening via single-pass caching
+            var validRooms = new List<Room>();
+            var controllersMatrix = new List<LightsController[]>(); // Holds pre-resolved arrays per room
 
-            foreach (var room in cachedRooms) room.SetLightsColor(color);
+            foreach (Room room in rooms)
+            {
+                if (room?.AllLightControllers != null)
+                {
+                    validRooms.Add(room);
+                    room.SetLightsColor(color);
+                    controllersMatrix.Add(System.Linq.Enumerable.ToArray(room.AllLightControllers));
+                }
+            }
+
+            int roomCount = validRooms.Count;
 
             for (int i = 0; i < flickers; i++)
             {
-                // Bulk suppression phase sweep execution paths
-                for (int r = 0; i < cachedRooms.Count; i++)
+                // Bulk suppression phase sweep execution paths (Zero-allocation inner loops)
+                for (int r = 0; r < roomCount; r++)
                 {
-                    foreach (var controller in cachedRooms[r].AllLightControllers) controller.LightsEnabled = false;
+                    var controllers = controllersMatrix[r];
+                    int controllerCount = controllers.Length;
+                    for (int c = 0; c < controllerCount; c++)
+                    {
+                        if (controllers[c] != null) controllers[c].LightsEnabled = false;
+                    }
                 }
                 yield return Timing.WaitForSeconds(interval * 0.5f);
 
-                // Bulk restoration phase sweep execution paths
-                for (int r = 0; i < cachedRooms.Count; i++)
+                // Bulk restoration phase sweep execution paths (Zero-allocation inner loops)
+                for (int r = 0; r < roomCount; r++)
                 {
-                    foreach (var controller in cachedRooms[r].AllLightControllers) controller.LightsEnabled = true;
+                    var controllers = controllersMatrix[r];
+                    int controllerCount = controllers.Length;
+                    for (int c = 0; c < controllerCount; c++)
+                    {
+                        if (controllers[c] != null) controllers[c].LightsEnabled = true;
+                    }
                 }
                 yield return Timing.WaitForSeconds(interval * 0.5f);
             }
 
-            foreach (var room in cachedRooms) room.SetLightsColor(Color.clear);
+            for (int r = 0; r < roomCount; r++)
+            {
+                validRooms[r].SetLightsColor(Color.clear);
+            }
         }
         #endregion
     }
