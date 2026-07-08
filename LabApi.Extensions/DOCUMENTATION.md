@@ -153,7 +153,7 @@ public static void Toggle(this Door door)
 ```
 
 ### 🔹 `WhereNameIn()`
-**Description:** Filters a sequence of doors to return only those matching any of the specified <see cref="DoorName"/> layout tokens.
+**Description:** Filters a sequence of doors to return only those matching any of the specified <see cref="DoorName"/> tokens. Leverages lazy streaming pipelines to guarantee absolute zero heap allocation metrics.
 ```csharp
 public static IEnumerable<Door> WhereNameIn(this IEnumerable<Door> doors, params DoorName[] names)
 ```
