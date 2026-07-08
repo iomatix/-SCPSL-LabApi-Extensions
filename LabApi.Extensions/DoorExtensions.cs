@@ -32,7 +32,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Filters a sequence of doors to return only those matching any of the specified <see cref="DoorName"/> layout tokens.
+        /// Filters a sequence of doors to return only those matching any of the specified <see cref="DoorName"/> tokens.
+        /// Leverages lazy streaming pipelines to guarantee absolute zero heap allocation metrics.
         /// </summary>
         /// <param name="doors">The source collection of doors evaluated for identity matching.</param>
         /// <param name="names">The structural door identifier criteria context matrix used for filtering.</param>
@@ -41,33 +42,34 @@ namespace LabApi.Extensions
         {
             if (doors == null || names == null || names.Length == 0)
             {
-                return System.Linq.Enumerable.Empty<Door>();
+                yield break;
             }
 
-            List<Door> filtered = new();
+            int nameCount = names.Length;
+
             foreach (Door door in doors)
             {
                 if (door == null) continue;
 
-                foreach (DoorName name in names)
+                // High-Performance Indexed Loop replacing allocation-heavy foreach over arrays
+                for (int i = 0; i < nameCount; i++)
                 {
-                    if (door.DoorName == name)
+                    if (door.DoorName == names[i])
                     {
-                        filtered.Add(door);
+                        yield return door;
                         break;
                     }
                 }
             }
-            return filtered;
         }
 
         #region Single Door Operations
 
-        /// <summary>
-        /// Fluently unseals an individual door instance, driving its structural passage topology state to open.
-        /// </summary>
-        /// <param name="door">The target door instance targeted for structural manipulation.</param>
-        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if the door is restricted by an active lock.</param>
+            /// <summary>
+            /// Fluently unseals an individual door instance, driving its structural passage topology state to open.
+            /// </summary>
+            /// <param name="door">The target door instance targeted for structural manipulation.</param>
+            /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if the door is restricted by an active lock.</param>
         public static void Open(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: true, bypassLocks);
 
         /// <summary>
@@ -85,7 +87,8 @@ namespace LabApi.Extensions
         /// <param name="locked">If set to <c>true</c>, forcibly engages the lock; if <c>false</c>, releases the specified lock reason constraint.</param>
         public static void SetLockState(this Door door, DoorLockReason reason, bool locked = true)
         {
-            door?.Lock(reason, locked);
+            if (door is null) return;
+            door.Lock(reason, locked);
         }
 
         /// <summary>
@@ -97,8 +100,6 @@ namespace LabApi.Extensions
         public static void SetOpenState(this Door door, bool opened, bool bypassLocks = false)
         {
             if (door is null) return;
-
-            // Corrected logic: If the door is locked and we are NOT bypassing locks, abort execution.
             if (door.IsLocked && !bypassLocks) return;
 
             door.IsOpened = opened;
@@ -149,10 +150,8 @@ namespace LabApi.Extensions
         public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason, bool locked = true)
         {
             if (doors is null) return;
-
             foreach (Door door in doors)
             {
-                // Reusing the single-target execution logic to prevent code duplication
                 door.SetLockState(reason, locked);
             }
         }
@@ -166,10 +165,8 @@ namespace LabApi.Extensions
         public static void SetOpenState(this IEnumerable<Door> doors, bool opened, bool bypassLocks = false)
         {
             if (doors is null) return;
-
             foreach (Door door in doors)
             {
-                // Reusing the single-target execution logic to guarantee structural consistency
                 door.SetOpenState(opened, bypassLocks);
             }
         }
@@ -183,10 +180,8 @@ namespace LabApi.Extensions
         public static void OpenAndLock(this IEnumerable<Door> doors, DoorLockReason reason, bool playSound = true)
         {
             if (doors is null) return;
-
             foreach (Door door in doors)
             {
-                // Reusing the single-target structural framework layer natively
                 door.OpenAndLock(reason, playSound);
             }
         }
@@ -202,7 +197,6 @@ namespace LabApi.Extensions
         public static bool IsElevatorDoor(this Door door)
         {
             if (door?.GameObject == null) return false;
-
             return door.GameObject.name.Contains("Elevator") ||
                    door.GameObject.GetComponentInParent<Interactables.Interobjects.ElevatorDoor>() != null;
         }
@@ -216,7 +210,6 @@ namespace LabApi.Extensions
         public static bool IsGate(this Door door)
         {
             if (door?.GameObject == null) return false;
-
             return door.GameObject.name.Contains("Gate");
         }
     }

@@ -69,20 +69,20 @@ namespace LabApi.Extensions
         public static bool AreAllGeneratorsEngaged(int minimumRequiredCount = 3)
         {
             var generators = Generator.List;
-            if (generators == null || generators.Count < minimumRequiredCount)
-            {
-                return false;
-            }
+            if (generators == null) return false;
 
+            int count = 0;
             foreach (var gen in generators)
             {
+                // Short-circuit: If any generator is unengaged, we fail immediately without completing the loop
                 if (gen == null || !gen.Engaged)
                 {
                     return false;
                 }
+                count++;
             }
 
-            return true;
+            return count >= minimumRequiredCount;
         }
     }
 }
