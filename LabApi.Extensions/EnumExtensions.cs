@@ -9,6 +9,13 @@ namespace LabApi.Extensions
     /// </summary>
     public static class EnumExtensions
     {
+        // High-performance CLR-optimized static generic cache metadata container
+        private static class EnumCache<T> where T : struct, Enum
+        {
+            public static readonly T[] Values = (T[])Enum.GetValues(typeof(T));
+            public static readonly int Length = Values.Length;
+        }
+
         /// <summary>
         /// Automatically transforms an execution enum field token into a standardized lowercase string key identifier.
         /// Eliminates redundant switch-case evaluation structures across independent sub-system audio pipeline configurations.
@@ -34,7 +41,6 @@ namespace LabApi.Extensions
         {
             if (string.IsNullOrWhiteSpace(value)) return defaultValue;
 
-            // Utilizing high-performance SDK-style parser engine avoiding allocation grid leaks
             return Enum.TryParse<T>(value, ignoreCase, out T result) ? result : defaultValue;
         }
 
@@ -46,11 +52,12 @@ namespace LabApi.Extensions
         /// <returns>A randomly evaluated structural option field choice evaluated and fetched securely from the target array bounds.</returns>
         public static T GetRandomValue<T>() where T : struct, Enum
         {
-            Array values = Enum.GetValues(typeof(T));
+            int length = EnumCache<T>.Length;
+            if (length == 0) return default;
 
-            // Querying structural data bounds via the thread-safe local isolation tracker pipeline
-            int randomIndex = SafeRandom.Next(0, values.Length);
-            return (T)values.GetValue(randomIndex);
+            // Querying structural data bounds via the thread-safe local isolation tracker pipeline (Zero-Allocation)
+            int randomIndex = SafeRandom.Next(0, length);
+            return EnumCache<T>.Values[randomIndex];
         }
     }
 }
