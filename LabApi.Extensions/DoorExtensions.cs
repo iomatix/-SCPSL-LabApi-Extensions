@@ -144,65 +144,146 @@ namespace LabApi.Extensions
 
         #endregion
 
-        #region Batch Collection Operations
+        #region Batch Collection Operations (Zero-Allocation High-Performance Overloads)
 
         /// <summary>
-        /// Attempts to mass unseal an aggregated collection sequence of doors cleanly.
+        /// Attempts to mass unseal a collection of doors cleanly.
         /// </summary>
-        /// <param name="doors">The target collection stream of doors undergoing passage status modification.</param>
-        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if individual doors are restricted by an active lock.</param>
-        public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: true, bypassLocks);
+        public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false)
+        {
+            if (doors is null) return;
+
+            if (doors is List<Door> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].Open(bypassLocks);
+                return;
+            }
+
+            foreach (Door door in doors) door.Open(bypassLocks);
+        }
 
         /// <summary>
-        /// Attempts to mass seal an aggregated collection sequence of doors cleanly.
+        /// Attempts to mass unseal an inline array of doors cleanly.
         /// </summary>
-        /// <param name="doors">The target collection stream of doors undergoing passage status modification.</param>
-        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if individual doors are restricted by an active lock.</param>
-        public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: false, bypassLocks);
+        public static void Open(bool bypassLocks, params Door[] doors)
+        {
+            if (doors is null) return;
+
+            int count = doors.Length;
+            for (int i = 0; i < count; i++) doors[i].Open(bypassLocks);
+        }
 
         /// <summary>
-        /// Forcibly updates the administrative server-side lock state across an aggregated collection sequence of doors.
+        /// Attempts to mass seal a collection of doors cleanly.
         /// </summary>
-        /// <param name="doors">The target collection stream of doors undergoing lock state modification.</param>
-        /// <param name="reason">The specific structural <see cref="DoorLockReason"/> constraint token applied or removed.</param>
-        /// <param name="locked">If set to <c>true</c>, forcibly engages the lock; if <c>false</c>, releases the specified lock reason constraint.</param>
+        public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false)
+        {
+            if (doors is null) return;
+
+            if (doors is List<Door> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].Close(bypassLocks);
+                return;
+            }
+
+            foreach (Door door in doors) door.Close(bypassLocks);
+        }
+
+        /// <summary>
+        /// Attempts to mass seal an inline array of doors cleanly.
+        /// </summary>
+        public static void Close(bool bypassLocks, params Door[] doors)
+        {
+            if (doors is null) return;
+
+            int count = doors.Length;
+            for (int i = 0; i < count; i++) doors[i].Close(bypassLocks);
+        }
+
+        /// <summary>
+        /// Forcibly updates the administrative server-side lock state across a collection of doors.
+        /// </summary>
         public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason, bool locked = true)
         {
             if (doors is null) return;
-            foreach (Door door in doors)
+
+            if (doors is List<Door> concreteList)
             {
-                door.SetLockState(reason, locked);
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].SetLockState(reason, locked);
+                return;
             }
+
+            foreach (Door door in doors) door.SetLockState(reason, locked);
         }
 
         /// <summary>
-        /// Attempts to mass mutate the passage activation status (Open or Closed topology) across an aggregated collection sequence of doors.
+        /// Forcibly updates the administrative server-side lock state across an inline array of doors.
         /// </summary>
-        /// <param name="doors">The target collection stream of doors undergoing passage status modification.</param>
-        /// <param name="opened">If set to <c>true</c>, attempts to unseal the doors; if <c>false</c>, forces them to close.</param>
-        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if individual doors are restricted by an active lock.</param>
+        public static void SetLockState(DoorLockReason reason, bool locked, params Door[] doors)
+        {
+            if (doors is null) return;
+
+            int count = doors.Length;
+            for (int i = 0; i < count; i++) doors[i].SetLockState(reason, locked);
+        }
+
+        /// <summary>
+        /// Attempts to mass mutate the passage activation status across a collection of doors.
+        /// </summary>
         public static void SetOpenState(this IEnumerable<Door> doors, bool opened, bool bypassLocks = false)
         {
             if (doors is null) return;
-            foreach (Door door in doors)
+
+            if (doors is List<Door> concreteList)
             {
-                door.SetOpenState(opened, bypassLocks);
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].SetOpenState(opened, bypassLocks);
+                return;
             }
+
+            foreach (Door door in doors) door.SetOpenState(opened, bypassLocks);
         }
 
         /// <summary>
-        /// Forcibly unseals a collection layout of doors and applies an administrative server-side lock state under a specific structural reason constraint.
+        /// Attempts to mass mutate the passage activation status across an inline array of doors.
         /// </summary>
-        /// <param name="doors">The targeted enumerable collection of doors undergoing bulk state mutations.</param>
-        /// <param name="reason">The underlying system internal reason token driving the mechanical lockdown registration.</param>
-        /// <param name="playSound">If set to <c>true</c>, forces the target door modules to trigger its diagnostic lock bypass denied audio cue.</param>
+        public static void SetOpenState(bool opened, bool bypassLocks, params Door[] doors)
+        {
+            if (doors is null) return;
+
+            int count = doors.Length;
+            for (int i = 0; i < count; i++) doors[i].SetOpenState(opened, bypassLocks);
+        }
+
+        /// <summary>
+        /// Forcibly unseals a collection of doors and applies a server-side lock state.
+        /// </summary>
         public static void OpenAndLock(this IEnumerable<Door> doors, DoorLockReason reason, bool playSound = true)
         {
             if (doors is null) return;
-            foreach (Door door in doors)
+
+            if (doors is List<Door> concreteList)
             {
-                door.OpenAndLock(reason, playSound);
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].OpenAndLock(reason, playSound);
+                return;
             }
+
+            foreach (Door door in doors) door.OpenAndLock(reason, playSound);
+        }
+
+        /// <summary>
+        /// Forcibly unseals an inline array of doors and applies a server-side lock state.
+        /// </summary>
+        public static void OpenAndLock(DoorLockReason reason, bool playSound, params Door[] doors)
+        {
+            if (doors is null) return;
+
+            int count = doors.Length;
+            for (int i = 0; i < count; i++) doors[i].OpenAndLock(reason, playSound);
         }
 
         #endregion
