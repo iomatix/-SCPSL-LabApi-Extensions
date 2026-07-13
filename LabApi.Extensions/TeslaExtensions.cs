@@ -24,7 +24,7 @@ namespace LabApi.Extensions
         }
         #endregion
 
-        #region Batch & Params Operations
+        #region Batch & Params Operations (Added for API Consistency)
         /// <summary>
         /// Disables a collection of Tesla gates for a specified duration with an optional discharge trigger.
         /// </summary>
@@ -63,7 +63,7 @@ namespace LabApi.Extensions
             => teslas.DisableFor(duration, forceTrigger);
 
         /// <summary>
-        /// Deactivates a collection of Tesla gates using a default shorthand configuration envelope.
+        /// Deactivates a collection of Tesla gates using a default shorthand configuration.
         /// </summary>
         public static void Disable(this IEnumerable<Tesla> teslas, float duration = 5.0f, bool forceTrigger = false)
             => teslas.DisableFor(duration, forceTrigger);
