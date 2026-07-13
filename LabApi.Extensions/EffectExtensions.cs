@@ -1,11 +1,11 @@
 ﻿using LabApi.Features.Wrappers;
 using System;
+using System.Collections.Generic;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Explicit unified tracking keys for all native SCP:Secret Laboratory status effect classifications.
-    /// Eliminates the need for custom plugin-level mapping enums.
+    /// Specifies the native SCP:Secret Laboratory status effect types.
     /// </summary>
     public enum FacilityEffectType
     {
@@ -32,23 +32,18 @@ namespace LabApi.Extensions
     }
 
     /// <summary>
-    /// Provides high-performance execution routing layers to dynamically activate status effects 
-    /// via runtime enum tokens, bypassing strict compile-time generic constraints.
+    /// Provides extension methods for applying status effects to players.
     /// </summary>
     public static class EffectExtensions
     {
+        #region Single Player Operations
         /// <summary>
-        /// Forcibly activates a native facility status effect onto the targeted player instance via its runtime enum identifier.
+        /// Enables a specific status effect on a single player.
         /// </summary>
-        /// <param name="player">The target <see cref="Player"/> entity undergoing sensory or physical modulation.</param>
-        /// <param name="effect">The runtime <see cref="FacilityEffectType"/> token specifying the desired status effect.</param>
-        /// <param name="intensity">The active scale intensity coefficient assigned to the status node.</param>
-        /// <param name="duration">The total temporal execution lifespan in seconds allocated for the effect loop.</param>
         public static void EnableEffect(this Player player, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
         {
             if (player?.GameObject is null) return;
 
-            // Highly optimized C# 9.0 clean pattern-driven execution matrix
             switch (effect)
             {
                 case FacilityEffectType.Blurred: player.EnableEffect<CustomPlayerEffects.Blurred>(intensity, duration); break;
@@ -88,5 +83,51 @@ namespace LabApi.Extensions
                 default: throw new ArgumentException($"[LabApi.Extensions] Unrecognized facility status effect mapping: {effect}");
             }
         }
+        #endregion
+
+        #region Batch & Params Operations (Added for API Consistency)
+        /// <summary>
+        /// Enables a specific status effect on a collection of players.
+        /// </summary>
+        public static void EnableEffect(this IEnumerable<Player> players, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
+        {
+            if (players is null) return;
+
+            if (players is List<Player> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    concreteList[i].EnableEffect(effect, intensity, duration);
+                }
+                return;
+            }
+
+            foreach (Player player in players)
+            {
+                player.EnableEffect(effect, intensity, duration);
+            }
+        }
+
+        /// <summary>
+        /// Enables a specific status effect on an inline array of players using default intensity and duration.
+        /// </summary>
+        public static void EnableEffect(FacilityEffectType effect, params Player[] players)
+            => EnableEffect(players, effect);
+
+        /// <summary>
+        /// Enables a specific status effect on an inline array of players with custom intensity and duration.
+        /// </summary>
+        public static void EnableEffect(FacilityEffectType effect, byte intensity, float duration, params Player[] players)
+        {
+            if (players is null) return;
+
+            int count = players.Length;
+            for (int i = 0; i < count; i++)
+            {
+                players[i].EnableEffect(effect, intensity, duration);
+            }
+        }
+        #endregion
     }
 }

@@ -11,14 +11,13 @@ using UnityEngine;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides enterprise-grade global broadcast grid interfaces, real-time spatial proximity evaluation tracking, 
-    /// and telemetry notification distribution adapters for server-side <see cref="Player"/> collections.
+    /// Provides extension methods for player tracking, notifications, spatial queries, and batch state updates.
     /// </summary>
     public static class PlayerExtensions
     {
         #region Tracking
         /// <summary>
-        /// Seamlessly attaches any external tracking GameObject source to a live Player target utilizing native sub-frame anchor locking components.
+        /// Attaches a tracking GameObject to a single player using a transform tracker component.
         /// </summary>
         public static void AttachTrackingObject(this Player player, GameObject followerObject, Vector3 offset = default)
         {
@@ -27,15 +26,43 @@ namespace LabApi.Extensions
             var tracker = followerObject.GetComponent<RuntimeTransformTracker>() ?? followerObject.AddComponent<RuntimeTransformTracker>();
             tracker.Setup(player.GameObject.transform, offset, () => player.IsReady && player.IsAlive);
         }
+
+        /// <summary>
+        /// Attaches a tracking GameObject to a collection of players.
+        /// </summary>
+        public static void AttachTrackingObject(this IEnumerable<Player> players, GameObject followerObject, Vector3 offset = default)
+        {
+            if (players is null || followerObject is null) return;
+
+            if (players is List<Player> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].AttachTrackingObject(followerObject, offset);
+                return;
+            }
+
+            foreach (Player player in players)
+            {
+                player.AttachTrackingObject(followerObject, offset);
+            }
+        }
+
+        /// <summary>
+        /// Attaches a tracking GameObject to an inline array of players.
+        /// </summary>
+        public static void AttachTrackingObject(GameObject followerObject, Vector3 offset, params Player[] players)
+        {
+            if (players is null || followerObject is null) return;
+
+            int count = players.Length;
+            for (int i = 0; i < count; i++) players[i].AttachTrackingObject(followerObject, offset);
+        }
         #endregion
 
         #region Mass Notifications
         /// <summary>
-        /// Dispatches a localized streaming Hint display message layer across all currently verified, 
-        /// ready human and active simulation subjects simultaneously.
+        /// Sends a hint message to all fully initialized and ready players.
         /// </summary>
-        /// <param name="hintContent">The raw textual payload character sequence or UI element layout string targeted for projection on client screens.</param>
-        /// <param name="duration">The operational tracking lifespan timeframe measured in seconds, specifying how long the overlay layer remains visible on user displays.</param>
         public static void BroadcastHintToAll(string hintContent, float duration = 5f)
         {
             if (string.IsNullOrEmpty(hintContent)) return;
@@ -50,44 +77,48 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Dispatches a visual streaming Hint display message across a specific filtered collection of player instances.
-        /// Defensively filters out null entities or subjects that are not fully initialized and round-ready.
+        /// Sends a hint message to a collection of players, filtering out null or unready entities.
         /// </summary>
-        /// <param name="players">The targeted enumerable collection of <see cref="Player"/> instances to receive the interface overlay.</param>
-        /// <param name="hintContent">The localized notification text sequence to display on the user interface grid.</param>
-        /// <param name="duration">The visual display lifetime duration in seconds allocated for the hint layout overlay.</param>
-        public static void BroadcastHint(this System.Collections.Generic.IEnumerable<Player> players, string hintContent, float duration = 5f)
+        public static void BroadcastHint(this IEnumerable<Player> players, string hintContent, float duration = 5f)
         {
-            if (players == null || string.IsNullOrEmpty(hintContent))
+            if (players == null || string.IsNullOrEmpty(hintContent)) return;
+
+            if (players is List<Player> concreteList)
             {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    if (concreteList[i] != null && concreteList[i].IsReady)
+                    {
+                        concreteList[i].SendHint(hintContent, duration);
+                    }
+                }
                 return;
             }
 
             foreach (Player player in players)
             {
-                if (player == null || !player.IsReady)
+                if (player != null && player.IsReady)
                 {
-                    continue;
+                    player.SendHint(hintContent, duration);
                 }
-
-                player.SendHint(hintContent, duration);
             }
         }
+
+        /// <summary>
+        /// Sends a hint message to an inline array of players, filtering out null or unready entities.
+        /// </summary>
+        public static void BroadcastHint(string hintContent, float duration, params Player[] players)
+            => BroadcastHint(players, hintContent, duration);
         #endregion
 
         #region Status Tracking
         /// <summary>
-        /// Safe, high-performance extraction wrapper designed to query the underlying structural statistical tracking systems 
-        /// and yield the current active value coefficient of a subject's Hume Shield asset pool.
+        /// Gets the current Hume Shield value of a player, returning 0 if the stat module is missing.
         /// </summary>
-        /// <param name="player">The target <see cref="Player"/> instance whose modular stats matrix is being safely evaluated.</param>
-        /// <returns>The real-time scalar volume tracking value of the active hume shield; defaults to 0.0f if the module is non-existent on the subject role.</returns>
         public static float GetHumeShieldValue(this Player player)
         {
-            if (player == null || player.ReferenceHub == null)
-            {
-                return 0f;
-            }
+            if (player == null || player.ReferenceHub == null) return 0f;
 
             if (player.ReferenceHub.playerStats.TryGetModule<PlayerStatsSystem.HumeShieldStat>(out var shieldStat))
             {
@@ -98,11 +129,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Evaluates with high-performance metrics whether the targeted player instance represents 
-        /// a fully initialized, active human subject who is currently alive in the current round lifecycle.
+        /// Determines if the player is an active, ready, and living human faction member.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> entity execution boundary context to evaluate.</param>
-        /// <returns><c>true</c> if the subject is structurally ready, alive, and belongs to a human faction; otherwise, <c>false</c>.</returns>
         public static bool IsLivingHuman(this Player player)
         {
             return player is not null && player.IsReady && player.IsAlive && player.IsHuman;
@@ -111,7 +139,7 @@ namespace LabApi.Extensions
 
         #region Spatial Proximity Tracking
         /// <summary>
-        /// Computes the precise linear Euclidean distance between the target player's current spatial coordinates and a specified 3D position vector.
+        /// Calculates the Euclidean distance between a player and a specified position vector.
         /// </summary>
         public static float GetDistanceTo(this Player player, Vector3 position)
         {
@@ -120,7 +148,7 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Evaluates defensively whether the specified player is positioned within a concrete linear maximum distance radius from a target spatial coordinate vector.
+        /// Checks if a player is within a maximum distance threshold from a position vector.
         /// </summary>
         public static bool IsWithinDistance(this Player player, Vector3 position, float maxDistance)
         {
@@ -131,7 +159,7 @@ namespace LabApi.Extensions
 
         #region Light Emission
         /// <summary>
-        /// Resolves the raw electrical emission state of whatever light-emitting hardware the subject currently holds.
+        /// Checks if the player's currently held light source item or weapon flashlight attachment is active.
         /// </summary>
         public static bool GetHeldLightSourceState(this Player player)
         {
@@ -141,7 +169,7 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Forces an immediate electrical state override on whatever light-emitting hardware the subject currently holds.
+        /// Toggles the activation state of the player's held light source item or weapon flashlight attachment.
         /// </summary>
         public static void SetHeldLightSourceState(this Player player, bool emit)
         {
@@ -150,25 +178,53 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Fluently drives an asynchronous localized strobe/flicker execution loop across the subject's held lightsource hardware asset layer.
+        /// Toggles the activation state of a collection of players' held light sources.
+        /// </summary>
+        public static void SetHeldLightSourceState(this IEnumerable<Player> players, bool emit)
+        {
+            if (players is null) return;
+
+            if (players is List<Player> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].SetHeldLightSourceState(emit);
+                return;
+            }
+
+            foreach (Player player in players)
+            {
+                player.SetHeldLightSourceState(emit);
+            }
+        }
+
+        /// <summary>
+        /// Toggles the activation state of an inline array of players' held light sources.
+        /// </summary>
+        public static void SetHeldLightSourceState(bool emit, params Player[] players)
+        {
+            if (players is null) return;
+
+            int count = players.Length;
+            for (int i = 0; i < count; i++) players[i].SetHeldLightSourceState(emit);
+        }
+
+        /// <summary>
+        /// Runs a coroutine loop that flickers the player's held light source.
         /// </summary>
         public static IEnumerator<float> FlickerHeldLightSourceCoroutine(this Player player, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
         {
             if (player?.GameObject is null) yield break;
 
-            // Secure the exact internal item runtime serialization reference type to prevent desync on hot-swaps
             Type initialItemType = player.CurrentItem?.GetType();
             if (initialItemType is null) yield break;
 
             for (int i = 0; i < flickerCount; i++)
             {
-                // Safety Verification: Break instantly if subject disconnects, dies, or swaps item tracks mid-loop
                 if (!player.IsReady || !player.IsAlive || player.CurrentItem?.GetType() != initialItemType) break;
 
                 bool isLastIteration = (i == flickerCount - 1);
                 onTickFeedback?.Invoke(player, isLastIteration && forceOff);
 
-                // Fluent state inversion mutation
                 player.SetHeldLightSourceState(!player.GetHeldLightSourceState());
                 yield return Timing.WaitForSeconds(delayPerFlicker);
             }
@@ -181,11 +237,30 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Evaluates whether the targeted player instance is currently emitting mobile photon fields 
-        /// via active standalone flashlights or tactical firearm attachments.
+        /// Triggers the flicker coroutine loop for a collection of players.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> entity execution boundary context to evaluate.</param>
-        /// <returns><c>true</c> if the subject possesses a validated and actively emitting light emission vector; otherwise, <c>false</c>.</returns>
+        public static void FlickerHeldLightSource(this IEnumerable<Player> players, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
+        {
+            if (players is null) return;
+
+            foreach (Player player in players)
+            {
+                if (player is not null)
+                {
+                    Timing.RunCoroutine(player.FlickerHeldLightSourceCoroutine(flickerCount, delayPerFlicker, forceOff, onTickFeedback));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Triggers the flicker coroutine loop for an inline array of players.
+        /// </summary>
+        public static void FlickerHeldLightSource(int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players)
+            => FlickerHeldLightSource(players, flickerCount, delayPerFlicker, forceOff, onTickFeedback);
+
+        /// <summary>
+        /// Verifies if the player is actively emitting light via flashlights or firearm attachments.
+        /// </summary>
         public static bool HasActiveLightSource(this Player player)
         {
             if (player is null) return false;
@@ -193,16 +268,14 @@ namespace LabApi.Extensions
             var currentItem = player.CurrentItem;
             if (currentItem is null) return false;
 
-            // 1. Evaluate dedicated standalone light sources (Flashlights, lanterns)
             if (currentItem.Base is InventorySystem.Items.ToggleableLights.ToggleableLightItemBase lightItem)
             {
                 return lightItem.IsEmittingLight;
             }
 
-            // 2. Evaluate weapon-mounted tactical attachments using our new FirearmExtensions tool!
             if (currentItem is FirearmItem firearm)
             {
-                return firearm.FlashlightEnabled && firearm.HasAttachment(InventorySystem.Items.Firearms.Attachments.AttachmentName.Flashlight);
+                return firearm.FlashlightEnabled && firearm.HasAttachment(AttachmentName.Flashlight);
             }
 
             return false;
@@ -211,25 +284,19 @@ namespace LabApi.Extensions
 
         #region Advanced Environmental & Position Filtering
         /// <summary>
-        /// Evaluates with absolute zero heap allocation whether the player's active room context 
-        /// matches any of the specified structural room layout signatures.
+        /// Checks if the player is in any of the specified rooms using a zero-allocation evaluation loop.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance tracked for environmental location boundaries.</param>
-        /// <param name="roomNames">An expandable parameters array sequence containing target <see cref="RoomName"/> layout tokens to compare against.</param>
-        /// <returns><c>true</c> if the player is verified inside any of the targeted room signatures; otherwise, <c>false</c>.</returns>
         public static bool IsInRoom(this Player player, params RoomName[] roomNames)
         {
             if (player?.Room == null) return false;
 
             RoomName currentRoomName = player.Room.Name;
 
-            // Fast-path evaluation execution grid: fallback to default evacuation shelter if no parameters are passed
             if (roomNames == null || roomNames.Length == 0)
             {
                 return currentRoomName == RoomName.EzEvacShelter;
             }
 
-            // Slow-path evaluation execution grid: optimized zero-allocation linear for-loop avoiding enumerator generation
             for (int i = 0; i < roomNames.Length; i++)
             {
                 if (roomNames[i] == currentRoomName)
@@ -242,11 +309,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Comprehensive environmental query evaluating whether the subject is engulfed in absolute darkness, 
-        /// safely mapping across both standard room lighting grids and independent moving elevator cabin systems.
+        /// Verifies if the player is in total darkness, accounting for both standard facility rooms and elevator cabins.
         /// </summary>
-        /// <param name="player">The target player subject checked for absolute environmental darkness parameters.</param>
-        /// <returns><c>true</c> if the player is verified within a dark environment (including cabins); otherwise, <c>false</c>.</returns>
         public static bool IsInTrueDarkness(this Player player)
         {
             if (player?.GameObject is null) return false;
@@ -274,10 +338,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Evaluates whether the localized room lighting grid envelope encompassing a specific <see cref="Player"/> instance has had its active illumination disabled.
+        /// Checks if the standard room lighting controllers are disabled in the player's current location.
         /// </summary>
-        /// <param name="player">The target player subject checked for dark room environmental parameters.</param>
-        /// <returns><c>true</c> if the room light controllers are entirely disabled; otherwise, <c>false</c>.</returns>
         public static bool IsInDarkRoom(this Player player)
         {
             Room room = player?.Room;
@@ -293,37 +355,25 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Performs a high-performance distance query utilizing underlying Unity vector squaring math (<c>sqrMagnitude</c>).
-        /// Completely circumvents expensive processor square root calculations (<c>Math.Sqrt</c>) to validate circular perimeter limits.
+        /// Validates circular proximity to a target vector using square magnitude to avoid performance overhead.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance targeted for spatial boundary verification.</param>
-        /// <param name="targetPosition">The target destination <see cref="Vector3"/> coordinate vector representing the radius center tracking point.</param>
-        /// <param name="radiusSize">The maximum radial threshold limitation value constraint in meters.</param>
-        /// <returns><c>true</c> if the player entity position falls inside the computed radial boundary space; otherwise, <c>false</c>.</returns>
         public static bool IsWithinRadius(this Player player, Vector3 targetPosition, float radiusSize)
         {
             if (player?.GameObject == null) return false;
 
-            // Utilizing squared displacement differences to eliminate high overhead computational roots
             float sqrDistance = (player.Position - targetPosition).sqrMagnitude;
             return sqrDistance <= (radiusSize * radiusSize);
         }
 
         /// <summary>
-        /// Evaluates defensively whether the player's spatial coordinates fall within a concrete radial proximity constraint 
-        /// intersecting any item position stored inside an aggregated sequence matrix tracking layout coordinates.
+        /// Checks if the player falls within a radius threshold of any provided target positions.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance tracked for structural proximity validation loops.</param>
-        /// <param name="positions">An enumerable sequence tracking absolute 3D positional coordinates vectors cached by sub-system layers.</param>
-        /// <param name="radiusSize">The maximum range allocation limit tracking circle threshold bounds.</param>
-        /// <returns><c>true</c> if the player entity is verified near at least one vector location tracked inside the sequence query; otherwise, <c>false</c>.</returns>
         public static bool IsWithinAnyRadius(this Player player, IEnumerable<Vector3> positions, float radiusSize)
         {
             if (player?.GameObject == null || positions == null) return false;
 
             float sqrRadiusSize = radiusSize * radiusSize;
 
-            // Iterating decoupled telemetry points safely to track spatial intersections
             foreach (Vector3 checkpointPos in positions)
             {
                 if ((player.Position - checkpointPos).sqrMagnitude <= sqrRadiusSize)
@@ -338,10 +388,8 @@ namespace LabApi.Extensions
 
         #region Collection Query Extensions
         /// <summary>
-        /// Filters an enumerable collection layout stream of players to yield exclusively active, ready human subjects who are currently alive.
+        /// Filters a player collection to return only ready and living instances.
         /// </summary>
-        /// <param name="players">The source enumerable collection tracking global or localized player entity matrix blocks.</param>
-        /// <returns>An evaluated historical sequence iteration tracking only verified active and alive <see cref="Player"/> instances.</returns>
         public static IEnumerable<Player> WhereAlive(this IEnumerable<Player> players)
         {
             if (players == null) yield break;
@@ -352,10 +400,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Filters an enumerable collection layout stream of players utilizing high-performance lazy execution to yield exclusively human subjects.
+        /// Filters a player collection to return only human faction members.
         /// </summary>
-        /// <param name="players">The source collection of player entities to undergo faction filtration.</param>
-        /// <returns>A filtered enumerable sequence layout containing only human player entities.</returns>
         public static IEnumerable<Player> WhereHuman(this IEnumerable<Player> players)
         {
             if (players == null) yield break;
@@ -366,10 +412,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Filters an enumerable collection layout stream of players to insulate the pipeline against subjects currently inside the Pocket Dimension.
+        /// Filters a player collection to return players who are not in the Pocket Dimension.
         /// </summary>
-        /// <param name="players">The source collection of player entities checked for spatial dimension parameters.</param>
-        /// <returns>A filtered enumerable sequence layout containing players outside the pocket dimension zone.</returns>
         public static IEnumerable<Player> WhereNotInPocket(this IEnumerable<Player> players)
         {
             if (players == null) yield break;
@@ -380,10 +424,9 @@ namespace LabApi.Extensions
         }
         #endregion
 
-        #region Batch Status Effects Injection
+        #region Status Effects Injection
         /// <summary>
-        /// Deploys an aggregated tactical batch of adverse visual and auditory status effect matrices simultaneously onto a single target entity.
-        /// Safely skips internal duration initialization routines for any specific effect parameter mapped to zero or negative temporal scales.
+        /// Applies a combination of visual and auditory status impairments to a single player.
         /// </summary>
         public static void ApplySensoryShock(this Player player, float flashDuration = 0.0f, float blindDuration = 0.0f, float blurDuration = 0.0f, float deafenDuration = 0.0f)
         {
@@ -394,113 +437,100 @@ namespace LabApi.Extensions
             if (blurDuration > 0f) player.EnableEffect(FacilityEffectType.Blurred, 1, blurDuration);
             if (deafenDuration > 0f) player.EnableEffect(FacilityEffectType.Deafened, 1, deafenDuration);
         }
+
+        /// <summary>
+        /// Applies a combination of visual and auditory status impairments to a collection of players.
+        /// </summary>
+        public static void ApplySensoryShock(this IEnumerable<Player> players, float flashDuration = 0.0f, float blindDuration = 0.0f, float blurDuration = 0.0f, float deafenDuration = 0.0f)
+        {
+            if (players is null) return;
+
+            if (players is List<Player> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    concreteList[i].ApplySensoryShock(flashDuration, blindDuration, blurDuration, deafenDuration);
+                }
+                return;
+            }
+
+            foreach (Player player in players)
+            {
+                player.ApplySensoryShock(flashDuration, blindDuration, blurDuration, deafenDuration);
+            }
+        }
+
+        /// <summary>
+        /// Applies a combination of visual and auditory status impairments to an inline array of players.
+        /// </summary>
+        public static void ApplySensoryShock(float flashDuration, float blindDuration, float blurDuration, float deafenDuration, params Player[] players)
+        {
+            if (players is null) return;
+
+            int count = players.Length;
+            for (int i = 0; i < count; i++)
+            {
+                players[i].ApplySensoryShock(flashDuration, blindDuration, blurDuration, deafenDuration);
+            }
+        }
         #endregion
 
         #region Cross-Entity Spatial Forwarding Overloads
         /// <summary>
-        /// Explicitly resolves the live structural <see cref="Room"/> sector currently encompassing the player's 
-        /// real-time position vector by forwarding the query directly onto the underlying map topology grid.
+        /// Resolves the facility room matching the player's current spatial coordinates.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance whose active spatial coordinates are evaluated.</param>
-        /// <returns>The concrete <see cref="Room"/> instance containing the player entity; otherwise, <see langword="null"/> if coordinates map to void zones.</returns>
         public static Room GetRoom(this Player player)
         {
-            if (player?.GameObject == null)
-            {
-                return null;
-            }
-
-            // Forwarding the structural translation lookup seamlessly using the player's spatial coordinate vector
+            if (player?.GameObject == null) return null;
             return player.Position.GetRoom();
         }
 
         /// <summary>
-        /// Computes the precise linear Euclidean distance between the player's current spatial coordinates 
-        /// and the central transform anchor position of the targeted room entity.
+        /// Calculates the distance between a player and a room center anchor.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance serving as the origin coordinate spatial anchor.</param>
-        /// <param name="room">The destination target <see cref="Room"/> instance checked for spatial displacement tracking.</param>
-        /// <returns>A single-precision floating-point scalar value indicating the physical displacement distance in meters.</returns>
         public static float GetDistanceTo(this Player player, Room room)
         {
-            if (player?.GameObject == null || room?.Base == null)
-            {
-                return 0f;
-            }
-
-            // Re-using the core vector-based linear calculation module under the hood
+            if (player?.GameObject == null || room?.Base == null) return 0f;
             return player.GetDistanceTo(room.Position);
         }
 
         /// <summary>
-        /// Performs a high-performance cross-entity proximity validation sweep between the player and a target room center
-        /// utilizing underlying Unity vector squaring math (<c>sqrMagnitude</c>) to avoid high overhead calculation paths.
+        /// Checks if the player is within a radius of the targeted room center.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance tracked for perimeter boundary alignment.</param>
-        /// <param name="room">The target destination <see cref="Room"/> architecture context serving as the circle tracking point center.</param>
-        /// <param name="radiusSize">The maximum range limitation value constraint in meters allowed for positive validation.</param>
-        /// <returns><c>true</c> if the player entity position falls inside the computed room radial envelope boundary; otherwise, <c>false</c>.</returns>
         public static bool IsWithinRadius(this Player player, Room room, float radiusSize)
         {
-            if (player?.GameObject == null || room?.Base == null)
-            {
-                return false;
-            }
-
-            // Forwarding directly onto the highly optimized squared displacement calculation pipeline
+            if (player?.GameObject == null || room?.Base == null) return false;
             return player.IsWithinRadius(room.Position, radiusSize);
         }
         #endregion
 
         #region Decoupled Gameplay Scenarios Validation
         /// <summary>
-        /// Validates defensively whether a player entity satisfies generic escape criteria based on life state, 
-        /// anomalous faction restrictions, and optimized radial proximity to an extraction zone vector.
+        /// Determines if a player fulfills basic criteria to trigger an escape sequence.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance tracking escape capability states.</param>
-        /// <param name="escapeZone">The target <see cref="Vector3"/> spatial coordinates representing the center of the extraction zone.</param>
-        /// <param name="escapeZoneSize">The maximum radial fallback size limit tracking extraction verification.</param>
-        /// <returns><c>true</c> if the player is alive, not an SCP subject, and positioned inside the radial extraction vector bounds; otherwise, <c>false</c>.</returns>
         public static bool IsEligibleForEscape(this Player player, Vector3 escapeZone, float escapeZoneSize)
         {
-            if (player == null || player.IsSCP || !player.IsAlive)
-            {
-                return false;
-            }
-
+            if (player == null || player.IsSCP || !player.IsAlive) return false;
             return player.IsWithinRadius(escapeZone, escapeZoneSize);
         }
 
         /// <summary>
-        /// Evaluates with high-performance metrics whether a player is safely positioned inside a valid protection shelter infrastructure.
-        /// Dynamically verifies structural room identifiers first before cascading into cached multi-point radial proximity checks.
+        /// Checks if a player is safely inside a designated shelter structure or location coordinate.
         /// </summary>
-        /// <param name="player">The source <see cref="Player"/> instance queried for tactical shelter containment.</param>
-        /// <param name="shelterZoneSize">The maximum boundary radius threshold assigned for spatial proximity calculations.</param>
-        /// <param name="cachedShelterLocations">An enumerable sequence tracking absolute 3D coordinate vectors of registered shelters generated by the host plugin.</param>
-        /// <param name="additionalRooms">An expandable parameters array sequence tracking custom <see cref="RoomName"/> layout tokens validated as shelter zones.</param>
-        /// <returns><c>true</c> if the player entity is confirmed inside a designated shelter structure or radius; otherwise, <c>false</c>.</returns>
         public static bool IsInShelter(this Player player, float shelterZoneSize, IEnumerable<Vector3> cachedShelterLocations, params RoomName[] additionalRooms)
         {
-            if (player == null)
-            {
-                return false;
-            }
+            if (player == null) return false;
 
-            // Phase 1: Fast-path zero-allocation room layout filtering
-            if (player.IsInRoom(additionalRooms))
-            {
-                return true;
-            }
+            if (player.IsInRoom(additionalRooms)) return true;
 
-            // Phase 2: High-performance squared displacement calculation sweep across cached infrastructure positions
             return player.IsWithinAnyRadius(cachedShelterLocations, shelterZoneSize);
         }
         #endregion
 
-        #region identity
+        #region Identity
         /// <summary>
-        /// Advanced 3-Stage Heuristic Cascade to find, expand and resolve unique players securely across an active collection stream.
+        /// Resolves a single player from a fuzzy string identifier using exact matching, substring containment, and Levenshtein distance checks.
         /// </summary>
         public static bool TryResolveFuzzy(this IEnumerable<Player> players, string identifier, out Player target, out string errorResponse)
         {
@@ -515,7 +545,6 @@ namespace LabApi.Extensions
 
             var allPlayers = players.ToList();
 
-            // STAGE 1: Exact / Case-Insensitive Verification (ID, Normalized UserID or Nickname)
             Player exactMatch = allPlayers.FirstOrDefault(p =>
                 p.PlayerId.ToString() == cleanSearch ||
                 p.UserId.NormalizeUserId() == cleanSearch ||
@@ -528,14 +557,12 @@ namespace LabApi.Extensions
                 return true;
             }
 
-            // STAGE 2: Substring Containment Verification Mapping
             var candidates = allPlayers.Where(p =>
             {
                 string nickLower = p.Nickname.ToLowerInvariant();
                 return nickLower.Contains(cleanSearch) || cleanSearch.Contains(nickLower);
             }).ToList();
 
-            // STAGE 3: Typo-Tolerance Matrix via Levenshtein Distance algorithms
             if (candidates.Count == 0)
             {
                 var distanceScores = new List<(Player player, int distance)>();
@@ -576,7 +603,6 @@ namespace LabApi.Extensions
             errorResponse = null;
             return true;
         }
+        #endregion
     }
-    #endregion
-
 }

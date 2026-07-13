@@ -4,16 +4,14 @@ using System.Collections.Generic;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides high-performance utility abstraction layers for manipulating Tesla gate components across the facility floor topology map.
+    /// Provides extension methods for controlling and manipulating Tesla gates.
     /// </summary>
     public static class TeslaExtensions
     {
+        #region Single Target Operations
         /// <summary>
-        /// Forcibly puts a specific Tesla gate into an inactive operational cooldown state for a designated time window.
+        /// Disables a single Tesla gate for a specified duration with an optional discharge trigger.
         /// </summary>
-        /// <param name="tesla">The source <see cref="Tesla"/> gate asset component model manipulated defensively.</param>
-        /// <param name="duration">The total temporal delay window in seconds during which the weapon array remains inert.</param>
-        /// <param name="forceTrigger">If set to <c>true</c>, forcibly shocks the gate logic blocks to discharge current arcs before applying the timer envelope.</param>
         public static void DisableFor(this Tesla tesla, float duration, bool forceTrigger = true)
         {
             if (tesla == null) return;
@@ -24,16 +22,22 @@ namespace LabApi.Extensions
             }
             tesla.InactiveTime = duration;
         }
+        #endregion
 
+        #region Batch & Params Operations (Added for API Consistency)
         /// <summary>
-        /// Iterates over a collection layout of Tesla gates to reset their active cooldown timers or force a temporary tactical shutdown loop.
+        /// Disables a collection of Tesla gates for a specified duration with an optional discharge trigger.
         /// </summary>
-        /// <param name="teslas">The target enumerable collection layout containing active Tesla subsystem nodes.</param>
-        /// <param name="duration">The core baseline operational inactive timer tracking value committed to the target assets.</param>
-        /// <param name="forceTrigger">If set to <c>true</c>, forcibly shocks the gate logic blocks to discharge current arcs before applying the timer envelope.</param>
-        public static void SetInactiveTimeForAll(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true)
+        public static void DisableFor(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true)
         {
             if (teslas == null) return;
+
+            if (teslas is List<Tesla> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].DisableFor(duration, forceTrigger);
+                return;
+            }
 
             foreach (Tesla tesla in teslas)
             {
@@ -42,16 +46,27 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// High-level semantic shortcut to instantly deactivate an entire collection profile of Tesla gates with an optional chronological duration envelope.
-        /// Seamlessly delegates execution to the underlying structural state engine to maintain absolute single responsibility.
+        /// Disables an inline array of Tesla gates for a specified duration with an optional discharge trigger.
         /// </summary>
-        /// <param name="teslas">The target enumerable profile of Tesla units undergoing technical suppression.</param>
-        /// <param name="duration">The target operational standby window in seconds. Defaults to 5.0 seconds matching standard facility protocols.</param>
-        /// <param name="forceTrigger">If set to <c>true</c>, forcibly shocks the gate logic blocks to discharge current arcs before applying the timer envelope.</param>
-        public static void Disable(this IEnumerable<Tesla> teslas, float duration = 5.0f, bool forceTrigger = false)
+        public static void DisableFor(float duration, bool forceTrigger, params Tesla[] teslas)
         {
-            teslas.SetInactiveTimeForAll(duration, forceTrigger: forceTrigger);
+            if (teslas is null) return;
+
+            int count = teslas.Length;
+            for (int i = 0; i < count; i++) teslas[i].DisableFor(duration, forceTrigger);
         }
 
+        /// <summary>
+        /// Sets the inactive cooldown time for a collection of Tesla gates.
+        /// </summary>
+        public static void SetInactiveTimeForAll(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true)
+            => teslas.DisableFor(duration, forceTrigger);
+
+        /// <summary>
+        /// Deactivates a collection of Tesla gates using a default shorthand configuration.
+        /// </summary>
+        public static void Disable(this IEnumerable<Tesla> teslas, float duration = 5.0f, bool forceTrigger = false)
+            => teslas.DisableFor(duration, forceTrigger);
+        #endregion
     }
 }

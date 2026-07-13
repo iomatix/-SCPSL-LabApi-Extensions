@@ -5,40 +5,26 @@ using System.Collections.Generic;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides advanced high-performance utility abstraction layers and shortcut overloads 
-    /// for the Movement Evacuation Coroutines (MEC) execution pipeline.
+    /// Provides utility extension methods for Movement Evacuation Coroutines (MEC).
     /// </summary>
     public static class TimingExtensions
     {
-        #region Independent Sub-System Delayed Spawners
-
+        #region Delayed Spawners
         /// <summary>
-        /// Executes a specified action after a structural delay window, but only if a designated 
-        /// state validation condition evaluates to true at the exact moment of execution.
+        /// Executes an action after a delay if the specified condition evaluates to true.
         /// </summary>
-        /// <param name="delay">The temporal delay duration in seconds to standby before invoking the predicate loop.</param>
-        /// <param name="condition">The state verification delegate evaluated defensively before running the core logic block.</param>
-        /// <param name="action">The core operational logic block executed seamlessly upon successful validation query.</param>
-        /// <param name="coroutineTag">An optional custom tracking token assigned automatically to the spawned MEC coroutine node.</param>
-        /// <returns>The native <see cref="CoroutineHandle"/> instance mapping the underlying execution lifetime track.</returns>
         public static CoroutineHandle CallDelayedIf(float delay, Func<bool> condition, Action action, string coroutineTag = null)
         {
-            if (action == null || condition == null)
-            {
-                return default;
-            }
+            if (action == null || condition == null) return default;
 
-            // Spawn the underlying delayed worker node seamlessly
             CoroutineHandle handle = Timing.CallDelayed(delay, () =>
             {
-                // Defensive verification boundary evaluation right before invoking the execution payload
                 if (condition.Invoke())
                 {
                     action.Invoke();
                 }
             });
 
-            // Handle optional isolated tracking tag synchronization dynamically
             if (!string.IsNullOrEmpty(coroutineTag))
             {
                 handle.Tag = coroutineTag;
@@ -48,12 +34,10 @@ namespace LabApi.Extensions
         }
         #endregion
 
-        #region Single Target Operations (Single Source of Truth)
-
+        #region Single Target Kill Operations
         /// <summary>
-        /// Forcibly terminates the active coroutine tracking instance bound to this specific string token identifier safely.
+        /// Kills all coroutines bound to the specified string tag.
         /// </summary>
-        /// <param name="tag">The source string tracking token mapping the active MEC coroutine layer to target for destruction.</param>
         public static void KillCoroutine(this string tag)
         {
             if (!string.IsNullOrEmpty(tag))
@@ -63,9 +47,8 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Defensively verifies whether the individual coroutine handle is actively running and forcibly terminates its lifetime thread.
+        /// Kills the coroutine mapped to the specified handle if it is running.
         /// </summary>
-        /// <param name="handle">The targeting live <see cref="CoroutineHandle"/> tracker focused for destruction.</param>
         public static void Kill(this CoroutineHandle handle)
         {
             if (handle.IsRunning)
@@ -73,18 +56,22 @@ namespace LabApi.Extensions
                 Timing.KillCoroutines(handle);
             }
         }
-
         #endregion
 
-        #region Batch Collection Operations (Pure DRY Wrappers)
-
+        #region Batch & Params Operations
         /// <summary>
-        /// Systematically terminates all active running coroutine execution tracks mapped to an aggregated collection layout of string tokens.
+        /// Kills all coroutines bound to the collection of string tags.
         /// </summary>
-        /// <param name="tags">The source enumerable stream tracking the explicit target MEC handles cleared out from memory spaces.</param>
         public static void KillCoroutines(this IEnumerable<string> tags)
         {
             if (tags == null) return;
+
+            if (tags is List<string> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].KillCoroutine();
+                return;
+            }
 
             foreach (string tag in tags)
             {
@@ -93,12 +80,29 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Systematically iterates over a collection stream of coroutine handles to terminate each active executing thread safely.
+        /// Kills all coroutines bound to the inline array of string tags.
         /// </summary>
-        /// <param name="handles">The targeted enumerable collection sequence of coroutine trackers.</param>
+        public static void KillCoroutines(params string[] tags)
+        {
+            if (tags is null) return;
+
+            int count = tags.Length;
+            for (int i = 0; i < count; i++) tags[i].KillCoroutine();
+        }
+
+        /// <summary>
+        /// Kills all coroutines associated with the collection of handles.
+        /// </summary>
         public static void Kill(this IEnumerable<CoroutineHandle> handles)
         {
             if (handles is null) return;
+
+            if (handles is List<CoroutineHandle> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].Kill();
+                return;
+            }
 
             foreach (CoroutineHandle handle in handles)
             {
@@ -107,9 +111,19 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Systematically terminates all running coroutine handles stored within the list layout utilizing zero heap allocation indexing loops, and flushes the cache.
+        /// Kills all coroutines associated with the inline array of handles.
         /// </summary>
-        /// <param name="coroutines">The backing collection layout tracking active executing MEC coroutine handles inside memory spaces.</param>
+        public static void Kill(params CoroutineHandle[] handles)
+        {
+            if (handles is null) return;
+
+            int count = handles.Length;
+            for (int i = 0; i < count; i++) handles[i].Kill();
+        }
+
+        /// <summary>
+        /// Kills all coroutines in the list using a zero-allocation loop and clears the list.
+        /// </summary>
         public static void KillAndClear(this List<CoroutineHandle> coroutines)
         {
             if (coroutines is null) return;
@@ -122,7 +136,6 @@ namespace LabApi.Extensions
 
             coroutines.Clear();
         }
-
         #endregion
     }
 }
