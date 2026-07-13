@@ -3,6 +3,7 @@ using LabApi.Features.Wrappers;
 using MapGeneration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LabApi.Extensions
 {
@@ -13,6 +14,7 @@ namespace LabApi.Extensions
     public static class ElevatorExtensions
     {
         #region Active Floor Operations (Safe State Mutators)
+
         /// <summary>
         /// Fluently opens ONLY the elevator doors located on the currently active floor level, preventing cross-floor safety exploits.
         /// </summary>
@@ -66,7 +68,6 @@ namespace LabApi.Extensions
         /// <returns><c>true</c> if the door position maps perfectly onto the elevator car's active vertical alignment track; otherwise, <c>false</c>.</returns>
         private static bool IsDoorAtCurrentLevel(this Elevator elevator, Door door, Interactables.Interobjects.ElevatorDoor nativeDoor)
         {
-            // FIXED: Replaced non-existent .Chamber property allocation with the native base component wrapper hook (.Base)
             if (elevator?.Base is null) return false;
 
             float verticalDelta = Math.Abs(door.Position.y - elevator.Base.transform.position.y);
@@ -74,9 +75,34 @@ namespace LabApi.Extensions
             // A threshold delta limit of 3.5 meters perfectly encapsulates the vertical clearance envelope of an active cabin floor link
             return verticalDelta <= 3.5f;
         }
+
         #endregion
 
         #region Collection Query Extensions (Spatial Matrices)
+
+        /// <summary>
+        /// Resolves the high-level <see cref="Elevator"/> wrapper associated with this specific door instance.
+        /// Supports both wrapper casting and direct native component resolution fallbacks.
+        /// </summary>
+        /// <param name="door">The target <see cref="Door"/> instance checked for associated elevator linkages.</param>
+        /// <returns>The resolved <see cref="Elevator"/> wrapper if successfully mapped; otherwise, null.</returns>
+        public static Elevator GetElevator(this Door door)
+        {
+            if (door == null) return null;
+
+            if (door is ElevatorDoor elevatorDoor)
+            {
+                return elevatorDoor.Elevator;
+            }
+
+            if (door.GameObject != null && door.GameObject.TryGetComponent<Interactables.Interobjects.ElevatorDoor>(out var nativeDoor))
+            {
+                return Elevator.GetByGroup(nativeDoor.Group)?.FirstOrDefault();
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
         /// </summary>
@@ -120,9 +146,26 @@ namespace LabApi.Extensions
                 }
             }
         }
+
         #endregion
 
         #region State Assessment (Validation Ensembles)
+
+        /// <summary>
+        /// Verifies whether the associated elevator cabin is currently physically aligned with this specific door's vertical deck level.
+        /// Used comprehensively across door interaction layers to prevent void access exploits.
+        /// </summary>
+        /// <param name="door">The target <see cref="Door"/> instance checked against cabin proximity envelopes.</param>
+        /// <returns><c>true</c> if the cabin is present at the door's floor level; otherwise, <c>false</c>.</returns>
+        public static bool IsElevatorAtDoorLevel(this Door door)
+        {
+            var elevator = door.GetElevator();
+            if (elevator?.Base == null) return false;
+
+            float verticalDelta = Math.Abs(door.Position.y - elevator.Base.transform.position.y);
+            return verticalDelta <= 3.5f;
+        }
+
         /// <summary>
         /// Evaluates whether any elevator infrastructure bound to the specified room is actively executing a mechanical movement sequence.
         /// </summary>
@@ -160,9 +203,11 @@ namespace LabApi.Extensions
             }
             return false;
         }
+
         #endregion
 
         #region Mass Enforcement (Administrative Hooks)
+
         /// <summary>
         /// Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
         /// </summary>
@@ -198,6 +243,7 @@ namespace LabApi.Extensions
                 if (SafeRandom.Range(0f, 100f) <= affectChance) elevatorAction(elevator);
             }
         }
+
         #endregion
     }
 }

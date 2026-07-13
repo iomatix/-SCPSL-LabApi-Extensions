@@ -27,7 +27,8 @@ namespace LabApi.Extensions
         {
             if (door != null)
             {
-                door.IsOpened = !door.IsOpened;
+                // Reusing SetOpenState to naturally handle elevator safety and state validation
+                door.SetOpenState(!door.IsOpened, bypassLocks: true);
             }
         }
 
@@ -65,11 +66,11 @@ namespace LabApi.Extensions
 
         #region Single Door Operations
 
-            /// <summary>
-            /// Fluently unseals an individual door instance, driving its structural passage topology state to open.
-            /// </summary>
-            /// <param name="door">The target door instance targeted for structural manipulation.</param>
-            /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if the door is restricted by an active lock.</param>
+        /// <summary>
+        /// Fluently unseals an individual door instance, driving its structural passage topology state to open.
+        /// </summary>
+        /// <param name="door">The target door instance targeted for structural manipulation.</param>
+        /// <param name="bypassLocks">If set to <c>true</c>, forces the state mutation even if the door is restricted by an active lock.</param>
         public static void Open(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: true, bypassLocks);
 
         /// <summary>
@@ -89,10 +90,17 @@ namespace LabApi.Extensions
         {
             if (door is null) return;
             door.Lock(reason, locked);
+
+            // Automatically evaluate and restore elevator door state when a lock is released
+            if (!locked)
+            {
+                door.CheckAndRestoreElevatorDoorState();
+            }
         }
 
         /// <summary>
         /// Mutates the passage activation status (Open or Closed topology) of an individual door instance.
+        /// This method acts as the single source of truth for all door state mutations.
         /// </summary>
         /// <param name="door">The target door instance undergoing passage status modification.</param>
         /// <param name="opened">If set to <c>true</c>, attempts to unseal the door; if <c>false</c>, forces it to close.</param>
@@ -101,6 +109,12 @@ namespace LabApi.Extensions
         {
             if (door is null) return;
             if (door.IsLocked && !bypassLocks) return;
+
+            // Absolute elevator safety gateway: refuse to open if the elevator cabin is elsewhere
+            if (opened && door.IsElevatorDoor() && !door.IsElevatorAtDoorLevel())
+            {
+                return;
+            }
 
             door.IsOpened = opened;
         }
@@ -115,11 +129,16 @@ namespace LabApi.Extensions
         {
             if (door is null) return;
 
-            door.IsOpened = true;
-            if (playSound)
+            // Evaluate if it's safe to open. If false, SetOpenState will safely close the door instead.
+            bool safeToOpen = !door.IsElevatorDoor() || door.IsElevatorAtDoorLevel();
+
+            door.SetOpenState(opened: safeToOpen, bypassLocks: true);
+
+            if (safeToOpen && playSound)
             {
                 door.PlayLockBypassDeniedSound();
             }
+
             door.Lock(reason, true);
         }
 
@@ -176,7 +195,7 @@ namespace LabApi.Extensions
         /// </summary>
         /// <param name="doors">The targeted enumerable collection of doors undergoing bulk state mutations.</param>
         /// <param name="reason">The underlying system internal reason token driving the mechanical lockdown registration.</param>
-        /// <param name="playSound">If set to <c>true</c>, forces the target door modules to trigger their diagnostic lock bypass denied audio cue.</param>
+        /// <param name="playSound">If set to <c>true</c>, forces the target door modules to trigger its diagnostic lock bypass denied audio cue.</param>
         public static void OpenAndLock(this IEnumerable<Door> doors, DoorLockReason reason, bool playSound = true)
         {
             if (doors is null) return;
@@ -196,9 +215,29 @@ namespace LabApi.Extensions
         /// <returns><c>true</c> if the object matches elevator architecture signatures; otherwise, <c>false</c>.</returns>
         public static bool IsElevatorDoor(this Door door)
         {
-            if (door?.GameObject == null) return false;
-            return door.GameObject.name.Contains("Elevator") ||
-                   door.GameObject.GetComponentInParent<Interactables.Interobjects.ElevatorDoor>() != null;
+            if (door == null) return false;
+            if (door is ElevatorDoor) return true;
+            return door.GameObject != null && door.GameObject.GetComponent<Interactables.Interobjects.ElevatorDoor>() != null;
+        }
+
+        /// <summary>
+        /// Evaluates and corrects the open state of an elevator door after a lock release event.
+        /// If the elevator is physically present at the deck and unlocked, the doors are automatically restored to their open state.
+        /// </summary>
+        /// <param name="door">The target <see cref="Door"/> instance targeted for state validation.</param>
+        public static void CheckAndRestoreElevatorDoorState(this Door door)
+        {
+            if (door == null) return;
+
+            if (door.IsElevatorDoor())
+            {
+                bool atLevel = door.IsElevatorAtDoorLevel();
+
+                // SSOT Integration: Reusing SetOpenState to dry up and fully consolidate execution pathways.
+                // If the elevator is at level, we try to open it (respecting active locks).
+                // If it is NOT at level, we force-close it by bypassing locks.
+                door.SetOpenState(opened: atLevel, bypassLocks: !atLevel);
+            }
         }
 
         /// <summary>
@@ -209,8 +248,8 @@ namespace LabApi.Extensions
         /// <returns><c>true</c> if the structural identity maps directly to facility Gate systems; otherwise, <c>false</c>.</returns>
         public static bool IsGate(this Door door)
         {
-            if (door?.GameObject == null) return false;
-            return door.GameObject.name.Contains("Gate");
+            if (door == null) return false;
+            return door is Gate;
         }
     }
 }
