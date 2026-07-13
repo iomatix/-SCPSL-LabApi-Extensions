@@ -201,7 +201,7 @@ public static void SetLockState(this Door door, DoorLockReason reason, bool lock
 ```
 
 ### 🔹 `SetOpenState()`
-**Description:** Mutates the passage activation status (Open or Closed topology) of an individual door instance.
+**Description:** Mutates the passage activation status (Open or Closed topology) of an individual door instance. This method acts as the single source of truth for all door state mutations.
 ```csharp
 public static void SetOpenState(this Door door, bool opened, bool bypassLocks = false)
 ```
@@ -213,39 +213,75 @@ public static void OpenAndLock(this Door door, DoorLockReason reason, bool playS
 ```
 
 ### 🔹 `Open()`
-**Description:** Attempts to mass unseal an aggregated collection sequence of doors cleanly.
+**Description:** Attempts to mass unseal a collection of doors cleanly.
 ```csharp
-public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: true, bypassLocks);
+public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false)
+```
+
+### 🔹 `Open()`
+**Description:** Attempts to mass unseal an inline array of doors cleanly.
+```csharp
+public static void Open(bool bypassLocks, params Door[] doors)
 ```
 
 ### 🔹 `Close()`
-**Description:** Attempts to mass seal an aggregated collection sequence of doors cleanly.
+**Description:** Attempts to mass seal a collection of doors cleanly.
 ```csharp
-public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.SetOpenState(opened: false, bypassLocks);
+public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false)
+```
+
+### 🔹 `Close()`
+**Description:** Attempts to mass seal an inline array of doors cleanly.
+```csharp
+public static void Close(bool bypassLocks, params Door[] doors)
 ```
 
 ### 🔹 `SetLockState()`
-**Description:** Forcibly updates the administrative server-side lock state across an aggregated collection sequence of doors.
+**Description:** Forcibly updates the administrative server-side lock state across a collection of doors.
 ```csharp
 public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason, bool locked = true)
 ```
 
+### 🔹 `SetLockState()`
+**Description:** Forcibly updates the administrative server-side lock state across an inline array of doors.
+```csharp
+public static void SetLockState(DoorLockReason reason, bool locked, params Door[] doors)
+```
+
 ### 🔹 `SetOpenState()`
-**Description:** Attempts to mass mutate the passage activation status (Open or Closed topology) across an aggregated collection sequence of doors.
+**Description:** Attempts to mass mutate the passage activation status across a collection of doors.
 ```csharp
 public static void SetOpenState(this IEnumerable<Door> doors, bool opened, bool bypassLocks = false)
 ```
 
+### 🔹 `SetOpenState()`
+**Description:** Attempts to mass mutate the passage activation status across an inline array of doors.
+```csharp
+public static void SetOpenState(bool opened, bool bypassLocks, params Door[] doors)
+```
+
 ### 🔹 `OpenAndLock()`
-**Description:** Forcibly unseals a collection layout of doors and applies an administrative server-side lock state under a specific structural reason constraint.
+**Description:** Forcibly unseals a collection of doors and applies a server-side lock state.
 ```csharp
 public static void OpenAndLock(this IEnumerable<Door> doors, DoorLockReason reason, bool playSound = true)
+```
+
+### 🔹 `OpenAndLock()`
+**Description:** Forcibly unseals an inline array of doors and applies a server-side lock state.
+```csharp
+public static void OpenAndLock(DoorLockReason reason, bool playSound, params Door[] doors)
 ```
 
 ### 🔹 `IsElevatorDoor()`
 **Description:** Performs hierarchical component reflection and token verification on the native GameObject metadata to isolate whether the asset behaves structurally as an elevator cabin bulkhead.
 ```csharp
 public static bool IsElevatorDoor(this Door door)
+```
+
+### 🔹 `CheckAndRestoreElevatorDoorState()`
+**Description:** Evaluates and corrects the open state of an elevator door after a lock release event. If the elevator is physically present at the deck and unlocked, the doors are automatically restored to their open state.
+```csharp
+public static void CheckAndRestoreElevatorDoorState(this Door door)
 ```
 
 ### 🔹 `IsGate()`
@@ -287,13 +323,13 @@ public static void EnableEffect(FacilityEffectType effect, byte intensity, float
 ## 📦 Class: ElevatorExtensions
 
 ### 🔹 `OpenActiveDoors()`
-**Description:** Opens elevator doors exclusively on the currently active floor level.
+**Description:** Fluently opens ONLY the elevator doors located on the currently active floor level, preventing cross-floor safety exploits.
 ```csharp
 public static void OpenActiveDoors(this Elevator elevator, bool bypassLocks = false)
 ```
 
 ### 🔹 `CloseActiveDoors()`
-**Description:** Closes elevator doors exclusively on the currently active floor level.
+**Description:** Fluently closes ONLY the elevator doors located on the currently active floor level.
 ```csharp
 public static void CloseActiveDoors(this Elevator elevator, bool bypassLocks = false)
 ```
@@ -346,50 +382,74 @@ public static void TurnOnLights(this IEnumerable<Elevator> elevators)
 public static void TurnOnLights(params Elevator[] elevators)
 ```
 
+### 🔹 `GetElevator()`
+**Description:** Resolves the high-level <see cref="Elevator"/> wrapper associated with this specific door instance. Supports both wrapper casting and direct native component resolution fallbacks.
+```csharp
+public static Elevator GetElevator(this Door door)
+```
+
 ### 🔹 `GetElevators()`
 **Description:** Gets all active elevators associated with the specified facility zone destination.
 ```csharp
 public static IEnumerable<Elevator> GetElevators(this FacilityZone zone)
 ```
 
-### 🔹 `GetElevatorsConnectedToRoom()`
-**Description:** Gets all elevators connected to the specified room.
-```csharp
-public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
-```
-
 ### 🔹 `GetElevatorsInZone()`
-**Description:** Gets all active elevators associated with the specified facility zone destination.
+**Description:** Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
 ```csharp
 public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zone.GetElevators();
 ```
 
+### 🔹 `GetElevatorsConnectedToRoom()`
+**Description:** Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
+```csharp
+public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+```
+
+### 🔹 `IsElevatorAtDoorLevel()`
+**Description:** Verifies whether the associated elevator cabin is currently physically aligned with this specific door's vertical deck level. Used comprehensively across door interaction layers to prevent void access exploits.
+```csharp
+public static bool IsElevatorAtDoorLevel(this Door door)
+```
+
 ### 🔹 `IsActiveInRoom()`
-**Description:** Checks if any elevator connected to the room is currently moving.
+**Description:** Evaluates whether any elevator infrastructure bound to the specified room is actively executing a mechanical movement sequence.
 ```csharp
 public static bool IsActiveInRoom(this Room room)
 ```
 
 ### 🔹 `IsInExecutiveElevator()`
-**Description:** Checks if the player is currently inside an elevator cabin.
+**Description:** Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
 ```csharp
 public static bool IsInExecutiveElevator(this Player player)
 ```
 
 ### 🔹 `LockElevators()`
-**Description:** Locks all elevator doors within the specified facility zone.
+**Description:** Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
 ```csharp
 public static void LockElevators(this FacilityZone zone)
 ```
 
+### 🔹 `LockElevatorsInZone()`
+**Description:** Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone. Retained for backward compatibility.
+```csharp
+public static void LockElevatorsInZone(FacilityZone zone) => zone.LockElevators();
+```
+
 ### 🔹 `UnlockElevators()`
-**Description:** Unlocks all elevator doors within the specified facility zone.
+**Description:** Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone.
 ```csharp
 public static void UnlockElevators(this FacilityZone zone)
 ```
 
+### 🔹 `UnlockElevatorsInZone()`
+**Description:** Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone. Retained for backward compatibility.
+```csharp
+public static void UnlockElevatorsInZone(FacilityZone zone) => zone.UnlockElevators();
+```
+
 ### 🔹 `HandleElevatorsForRoom()`
-**Description:** Executes a probabilistic action on all elevators connected to the specified room.
+**Description:** Processes a localized, probability-driven evaluation sweep across all elevators bound to a room, safely routing matching units into an execution action graph.
 ```csharp
 public static void HandleElevatorsForRoom(this Room room, float affectChance, float duration, Action<Elevator> elevatorAction)
 ```
@@ -750,6 +810,12 @@ public static void ApplyKineticBlast(this Pickup pickup, float linearVelocityMag
 public static void ApplyKineticBlast(this IEnumerable<Pickup> pickups, float linearVelocityMagnitude, float angularVelocityMagnitude)
 ```
 
+### 🔹 `ApplyKineticBlast()`
+**Description:** Iterates over an inline array of spawned pickups and forcibly applies batch kinetic physical propulsion forces.
+```csharp
+public static void ApplyKineticBlast(float linearVelocityMagnitude, float angularVelocityMagnitude, params Pickup[] pickups)
+```
+
 ---
 
 ## 📦 Class: PlayerExtensions
@@ -773,7 +839,7 @@ public static void AttachTrackingObject(GameObject followerObject, Vector3 offse
 ```
 
 ### 🔹 `BroadcastHintToAll()`
-**Description:** Sends a hint message to all fully initialized and ready players.
+**Description:** Sends a hint message to all fully initialized and ready players globally.
 ```csharp
 public static void BroadcastHintToAll(string hintContent, float duration = 5f)
 ```
@@ -787,7 +853,7 @@ public static void BroadcastHint(this IEnumerable<Player> players, string hintCo
 ### 🔹 `BroadcastHint()`
 **Description:** Sends a hint message to an inline array of players, filtering out null or unready entities.
 ```csharp
-public static void BroadcastHint(string hintContent, float duration, params Player[] players) => BroadcastHint(players, hintContent, duration);
+public static void BroadcastHint(string hintContent, float duration, params Player[] players)
 ```
 
 ### 🔹 `GetHumeShieldValue()`
@@ -853,7 +919,7 @@ public static void FlickerHeldLightSource(this IEnumerable<Player> players, int 
 ### 🔹 `FlickerHeldLightSource()`
 **Description:** Triggers the flicker coroutine loop for an inline array of players.
 ```csharp
-public static void FlickerHeldLightSource(int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players) => FlickerHeldLightSource(players, flickerCount, delayPerFlicker, forceOff, onTickFeedback);
+public static void FlickerHeldLightSource(int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players)
 ```
 
 ### 🔹 `HasActiveLightSource()`
@@ -959,7 +1025,7 @@ public static bool IsInShelter(this Player player, float shelterZoneSize, IEnume
 ```
 
 ### 🔹 `TryResolveFuzzy()`
-**Description:** Resolves a single player from a fuzzy string identifier using exact matching, substring containment, and Levenshtein distance checks.
+**Description:** Resolves a single player from a fuzzy string identifier using exact matching, substring containment, and Levenshtein distance checks. Completely avoids heavy allocations on large player lists during evaluation cycles.
 ```csharp
 public static bool TryResolveFuzzy(this IEnumerable<Player> players, string identifier, out Player target, out string errorResponse)
 ```
@@ -1020,26 +1086,38 @@ public static bool IsFreeOfEngagedGenerators(this Room room)
 public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
 ```
 
+### 🔹 `ExecuteActionOnRoomAndNeighbors()`
+**Description:** Executes a specified procedural action delegate graph across a localized room anchor point and seamlessly propagates the delegate pattern execution out into all adjacent physical room nodes safely.
+```csharp
+public static void ExecuteActionOnRoomAndNeighbors(this Room room, Action<Room> action)
+```
+
+### 🔹 `BreakAllDoors()`
+**Description:** Iterates over all door sub-components bound to the target room context to safely locate and fracture any breakable barriers (<see cref="BreakableDoor"/>) that remain intact.
+```csharp
+public static void BreakAllDoors(this Room room)
+```
+
 ### 🔹 `TurnOffLights()`
-**Description:** Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe. Insulation Upgrade: Mechanical elevator door override routines removed to preserve Single Responsibility Principle (SRP).
+**Description:** Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe.
 ```csharp
 public static void TurnOffLights(this Room room, float duration)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Fluent API DRY Refactor: Restores electrical power to the room's lighting grid controllers and optionally triggers a brief flicker sequence.
+**Description:** Restores electrical power to the room's lighting grid controllers and optionally triggers a brief flicker sequence.
 ```csharp
 public static void TurnOnLights(this Room room, float flickerDuration = 0f)
 ```
 
 ### 🔹 `TurnOffRoomAndNeighborLights()`
-**Description:** Forcibly suppresses illumination across this room and all physically connected adjacent neighboring rooms simultaneously for a designated duration track.
+**Description:** Forcibly suppresses illumination across this room and all physically connected adjacent neighboring rooms simultaneously. Fully DRY implementation utilizing centralized action propagation cascades.
 ```csharp
 public static void TurnOffRoomAndNeighborLights(this Room room, float duration, bool forced = false)
 ```
 
 ### 🔹 `TurnOnRoomAndNeighborLights()`
-**Description:** Restores active electrical power and forces an optional brief flickering update sequence across this room and all adjacent neighbors.
+**Description:** Restores active electrical power and forces an optional brief flickering update sequence across this room and all adjacent neighbors. Fully DRY implementation utilizing centralized action propagation cascades.
 ```csharp
 public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f)
 ```
@@ -1056,16 +1134,46 @@ public static void SetLightsColor(this Room room, Color color)
 public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
 ```
 
-### 🔹 `ExecuteActionOnRoomAndNeighbors()`
-**Description:** Executes a specified procedural action delegate graph across a localized room anchor point and seamlessly propagates the delegate pattern execution out into all adjacent physical room nodes safely.
+### 🔹 `SetLightsColor()`
+**Description:** Systematically executes a batch color spectrum override sweep across an inline array of rooms.
 ```csharp
-public static void ExecuteActionOnRoomAndNeighbors(this Room room, Action<Room> action)
+public static void SetLightsColor(Color color, params Room[] rooms)
+```
+
+### 🔹 `TurnOffLights()`
+**Description:** Systematically suppresses illumination across an aggregated collection sequence of rooms.
+```csharp
+public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
+```
+
+### 🔹 `TurnOffLights()`
+**Description:** Systematically suppresses illumination across an inline array of rooms.
+```csharp
+public static void TurnOffLights(float duration, params Room[] rooms)
+```
+
+### 🔹 `TurnOnLights()`
+**Description:** Systematically restores electrical power and optionally triggers a brief flicker sequence across a collection of rooms.
+```csharp
+public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
+```
+
+### 🔹 `TurnOnLights()`
+**Description:** Systematically restores electrical power and optionally triggers a brief flicker sequence across an inline array of rooms.
+```csharp
+public static void TurnOnLights(float flickerDuration, params Room[] rooms)
 ```
 
 ### 🔹 `BreakAllDoors()`
-**Description:** Iterates over all door sub-components bound to the target room context to safely locate and fracture any breakable barriers (<see cref="BreakableDoor"/>) that remain intact.
+**Description:** Iterates over all door sub-components bound to the target room collection to safely locate and fracture any breakable barriers.
 ```csharp
-public static void BreakAllDoors(this Room room)
+public static void BreakAllDoors(this IEnumerable<Room> rooms)
+```
+
+### 🔹 `BreakAllDoors()`
+**Description:** Iterates over all door sub-components bound to the target room inline array to safely locate and fracture any breakable barriers.
+```csharp
+public static void BreakAllDoors(params Room[] rooms)
 ```
 
 ### 🔹 `GetRoom()`
