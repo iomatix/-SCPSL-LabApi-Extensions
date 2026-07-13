@@ -78,6 +78,122 @@ namespace LabApi.Extensions
 
         #endregion
 
+        #region Batch Operations (Zero-Allocation High-Performance Overloads)
+
+        /// <summary>
+        /// Opens active floor doors for a collection of elevators.
+        /// </summary>
+        public static void OpenActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
+        {
+            if (elevators is null) return;
+
+            if (elevators is List<Elevator> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].OpenActiveDoors(bypassLocks);
+                return;
+            }
+
+            foreach (Elevator elevator in elevators) elevator.OpenActiveDoors(bypassLocks);
+        }
+
+        /// <summary>
+        /// Opens active floor doors for an inline array of elevators.
+        /// </summary>
+        public static void OpenActiveDoors(bool bypassLocks, params Elevator[] elevators)
+        {
+            if (elevators is null) return;
+
+            int count = elevators.Length;
+            for (int i = 0; i < count; i++) elevators[i].OpenActiveDoors(bypassLocks);
+        }
+
+        /// <summary>
+        /// Closes active floor doors for a collection of elevators.
+        /// </summary>
+        public static void CloseActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
+        {
+            if (elevators is null) return;
+
+            if (elevators is List<Elevator> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].CloseActiveDoors(bypassLocks);
+                return;
+            }
+
+            foreach (Elevator elevator in elevators) elevator.CloseActiveDoors(bypassLocks);
+        }
+
+        /// <summary>
+        /// Closes active floor doors for an inline array of elevators.
+        /// </summary>
+        public static void CloseActiveDoors(bool bypassLocks, params Elevator[] elevators)
+        {
+            if (elevators is null) return;
+
+            int count = elevators.Length;
+            for (int i = 0; i < count; i++) elevators[i].CloseActiveDoors(bypassLocks);
+        }
+
+        /// <summary>
+        /// Turns off lights for a collection of elevators for the specified duration.
+        /// </summary>
+        public static void TurnOffLights(this IEnumerable<Elevator> elevators, float duration)
+        {
+            if (elevators is null) return;
+
+            if (elevators is List<Elevator> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].TurnOffLights(duration);
+                return;
+            }
+
+            foreach (Elevator elevator in elevators) elevator.TurnOffLights(duration);
+        }
+
+        /// <summary>
+        /// Turns off lights for an inline array of elevators for the specified duration.
+        /// </summary>
+        public static void TurnOffLights(float duration, params Elevator[] elevators)
+        {
+            if (elevators is null) return;
+
+            int count = elevators.Length;
+            for (int i = 0; i < count; i++) elevators[i].TurnOffLights(duration);
+        }
+
+        /// <summary>
+        /// Turns on lights for a collection of elevators.
+        /// </summary>
+        public static void TurnOnLights(this IEnumerable<Elevator> elevators)
+        {
+            if (elevators is null) return;
+
+            if (elevators is List<Elevator> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i].TurnOnLights();
+                return;
+            }
+
+            foreach (Elevator elevator in elevators) elevator.TurnOnLights();
+        }
+
+        /// <summary>
+        /// Turns on lights for an inline array of elevators.
+        /// </summary>
+        public static void TurnOnLights(params Elevator[] elevators)
+        {
+            if (elevators is null) return;
+
+            int count = elevators.Length;
+            for (int i = 0; i < count; i++) elevators[i].TurnOnLights();
+        }
+
+        #endregion
+
         #region Collection Query Extensions (Spatial Matrices)
 
         /// <summary>
@@ -104,11 +220,9 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
+        /// Gets all active elevators associated with the specified facility zone destination.
         /// </summary>
-        /// <param name="zone">The targeting operational <see cref="FacilityZone"/> configuration used to anchor the tracking evaluation query.</param>
-        /// <returns>An enumerable collection containing all matching <see cref="Elevator"/> units intersecting the target layout zone bounds.</returns>
-        public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
+        public static IEnumerable<Elevator> GetElevators(this FacilityZone zone)
         {
             foreach (Elevator elevator in Elevator.List)
             {
@@ -128,6 +242,13 @@ namespace LabApi.Extensions
                 if (zoneMatched) yield return elevator;
             }
         }
+
+        /// <summary>
+        /// Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
+        /// </summary>
+        /// <param name="zone">The targeting operational <see cref="FacilityZone"/> configuration used to anchor the tracking evaluation query.</param>
+        /// <returns>An enumerable collection containing all matching <see cref="Elevator"/> units intersecting the target layout zone bounds.</returns>
+        public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zone.GetElevators();
 
         /// <summary>
         /// Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
@@ -212,19 +333,31 @@ namespace LabApi.Extensions
         /// Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
         /// </summary>
         /// <param name="zone">The targeting structural <see cref="FacilityZone"/> layout block assigned for immediate passage suppression.</param>
-        public static void LockElevatorsInZone(FacilityZone zone)
+        public static void LockElevators(this FacilityZone zone)
         {
-            foreach (var elevator in GetElevatorsInZone(zone)) elevator.LockAllDoors();
+            foreach (var elevator in zone.GetElevators()) elevator.LockAllDoors();
         }
+
+        /// <summary>
+        /// Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
+        /// Retained for backward compatibility.
+        /// </summary>
+        public static void LockElevatorsInZone(FacilityZone zone) => zone.LockElevators();
 
         /// <summary>
         /// Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone.
         /// </summary>
         /// <param name="zone">The targeting structural <see cref="FacilityZone"/> layout block assigned for operational recovery routines.</param>
-        public static void UnlockElevatorsInZone(FacilityZone zone)
+        public static void UnlockElevators(this FacilityZone zone)
         {
-            foreach (var elevator in GetElevatorsInZone(zone)) elevator.UnlockAllDoors();
+            foreach (var elevator in zone.GetElevators()) elevator.UnlockAllDoors();
         }
+
+        /// <summary>
+        /// Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone.
+        /// Retained for backward compatibility.
+        /// </summary>
+        public static void UnlockElevatorsInZone(FacilityZone zone) => zone.UnlockElevators();
 
         /// <summary>
         /// Processes a localized, probability-driven evaluation sweep across all elevators bound to a room, 
