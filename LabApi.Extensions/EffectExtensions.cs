@@ -85,7 +85,7 @@ namespace LabApi.Extensions
         }
         #endregion
 
-        #region Batch Player Operations (Zero-Allocation Internal Implementations)
+        #region Batch & Params Operations (Added for API Consistency)
         /// <summary>
         /// Enables a specific status effect on a collection of players.
         /// </summary>
