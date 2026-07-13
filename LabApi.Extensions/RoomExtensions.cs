@@ -15,6 +15,7 @@ namespace LabApi.Extensions
     public static class RoomExtensions
     {
         #region Adjacency & Neighbor Routing (DRY Engine)
+
         /// <summary>
         /// Resolves and collects all valid physically adjacent neighboring <see cref="Room"/> nodes connected directly to this room instance.
         /// </summary>
@@ -33,9 +34,11 @@ namespace LabApi.Extensions
                 }
             }
         }
+
         #endregion
 
         #region Collection Query Extensions
+
         /// <summary>
         /// Filters an enumerable collection stream of rooms to insulate the pipeline against sectors 
         /// representing the unstable spatial bounds of SCP-106's Pocket Dimension.
@@ -56,9 +59,11 @@ namespace LabApi.Extensions
             }
             return filtered;
         }
+
         #endregion
 
         #region Room Name Extensions
+
         /// <summary>
         /// Evaluates if a specific structural <see cref="RoomName"/> token corresponds directly to a tactical zone checkpoint airlock node.
         /// </summary>
@@ -94,9 +99,11 @@ namespace LabApi.Extensions
         /// <returns><c>true</c> if the zone signature represents a facility armory vault; otherwise, <c>false</c>.</returns>
         public static bool IsArmory(this RoomName roomName) =>
             roomName is RoomName.LczArmory or RoomName.HczArmory;
+
         #endregion
 
         #region Spatial Validation
+
         /// <summary>
         /// Verifies defensively if the target <see cref="Room"/> spatial zone is completely free of any power generators that are currently in an active, fully engaged state.
         /// </summary>
@@ -131,9 +138,11 @@ namespace LabApi.Extensions
             }
             return true;
         }
+
         #endregion
 
         #region Delegate Cascade Propagation
+
         /// <summary>
         /// Executes a specified procedural action delegate graph across a localized room anchor point 
         /// and seamlessly propagates the delegate pattern execution out into all adjacent physical room nodes safely.
@@ -172,9 +181,11 @@ namespace LabApi.Extensions
                 }
             }
         }
+
         #endregion
 
         #region Lighting Overrides
+
         /// <summary>
         /// Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe.
         /// </summary>
@@ -247,35 +258,126 @@ namespace LabApi.Extensions
             }
         }
 
+        #endregion
+
+        #region Batch Collection Operations (Zero-Allocation High-Performance Overloads)
+
         /// <summary>
         /// Systematically executes a batch color spectrum override sweep across an aggregated collection sequence of rooms.
-        /// Employs Zero-Allocation performance optimizations for concrete list architectures.
         /// </summary>
-        /// <param name="rooms">The collection layout tracking targeted room assets inside server memory.</param>
-        /// <param name="color">The target <see cref="Color"/> layout spectrum applied to all light nodes within the collection matrix.</param>
         public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
         {
             if (rooms is null) return;
 
-            // Zero-allocation batch processing optimization
             if (rooms is List<Room> concreteList)
             {
                 int count = concreteList.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    concreteList[i]?.SetLightsColor(color);
-                }
+                for (int i = 0; i < count; i++) concreteList[i]?.SetLightsColor(color);
                 return;
             }
 
-            foreach (Room room in rooms)
-            {
-                room?.SetLightsColor(color);
-            }
+            foreach (Room room in rooms) room?.SetLightsColor(color);
         }
+
+        /// <summary>
+        /// Systematically executes a batch color spectrum override sweep across an inline array of rooms.
+        /// </summary>
+        public static void SetLightsColor(Color color, params Room[] rooms)
+        {
+            if (rooms is null) return;
+
+            int count = rooms.Length;
+            for (int i = 0; i < count; i++) rooms[i]?.SetLightsColor(color);
+        }
+
+        /// <summary>
+        /// Systematically suppresses illumination across an aggregated collection sequence of rooms.
+        /// </summary>
+        public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
+        {
+            if (rooms is null) return;
+
+            if (rooms is List<Room> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i]?.TurnOffLights(duration);
+                return;
+            }
+
+            foreach (Room room in rooms) room?.TurnOffLights(duration);
+        }
+
+        /// <summary>
+        /// Systematically suppresses illumination across an inline array of rooms.
+        /// </summary>
+        public static void TurnOffLights(float duration, params Room[] rooms)
+        {
+            if (rooms is null) return;
+
+            int count = rooms.Length;
+            for (int i = 0; i < count; i++) rooms[i]?.TurnOffLights(duration);
+        }
+
+        /// <summary>
+        /// Systematically restores electrical power and optionally triggers a brief flicker sequence across a collection of rooms.
+        /// </summary>
+        public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
+        {
+            if (rooms is null) return;
+
+            if (rooms is List<Room> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i]?.TurnOnLights(flickerDuration);
+                return;
+            }
+
+            foreach (Room room in rooms) room?.TurnOnLights(flickerDuration);
+        }
+
+        /// <summary>
+        /// Systematically restores electrical power and optionally triggers a brief flicker sequence across an inline array of rooms.
+        /// </summary>
+        public static void TurnOnLights(float flickerDuration, params Room[] rooms)
+        {
+            if (rooms is null) return;
+
+            int count = rooms.Length;
+            for (int i = 0; i < count; i++) rooms[i]?.TurnOnLights(flickerDuration);
+        }
+
+        /// <summary>
+        /// Iterates over all door sub-components bound to the target room collection to safely locate and fracture any breakable barriers.
+        /// </summary>
+        public static void BreakAllDoors(this IEnumerable<Room> rooms)
+        {
+            if (rooms is null) return;
+
+            if (rooms is List<Room> concreteList)
+            {
+                int count = concreteList.Count;
+                for (int i = 0; i < count; i++) concreteList[i]?.BreakAllDoors();
+                return;
+            }
+
+            foreach (Room room in rooms) room?.BreakAllDoors();
+        }
+
+        /// <summary>
+        /// Iterates over all door sub-components bound to the target room inline array to safely locate and fracture any breakable barriers.
+        /// </summary>
+        public static void BreakAllDoors(params Room[] rooms)
+        {
+            if (rooms is null) return;
+
+            int count = rooms.Length;
+            for (int i = 0; i < count; i++) rooms[i]?.BreakAllDoors();
+        }
+
         #endregion
 
         #region Vector Spatial Intersections
+
         /// <summary>
         /// Extension method on <see cref="Vector3"/> to seamlessly resolve and fetch the live <see cref="Room"/> instance 
         /// encompassing the targeted coordinates layer directly from the underlying map topology grid.
@@ -322,9 +424,11 @@ namespace LabApi.Extensions
             float sqrDistance = (room.Position - position).sqrMagnitude;
             return sqrDistance <= (radiusSize * radiusSize);
         }
+
         #endregion
 
         #region Lighting Flicker Matrix (Animation Pipelines)
+
         /// <summary>
         /// Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Room"/> instance.
         /// </summary>
@@ -432,6 +536,7 @@ namespace LabApi.Extensions
                 validRooms[r].SetLightsColor(Color.clear);
             }
         }
+
         #endregion
     }
 }
