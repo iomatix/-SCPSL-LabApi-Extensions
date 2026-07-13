@@ -11,8 +11,7 @@ namespace LabApi.Extensions
         public static void CassieClear() => Announcer.Clear();
 
         /// <summary>
-        /// Systematically scrubs raw text fields, stripping hidden carriage returns and formatting errors 
-        /// while safely preserving empty strings for intentional text muting configurations.
+        /// Sanitizes a raw CASSIE string by removing carriage returns, replacing newlines with spaces, and trimming whitespace.
         /// </summary>
         public static string SanitizeCassieString(this string rawMessage)
             => string.IsNullOrWhiteSpace(rawMessage)
@@ -21,20 +20,17 @@ namespace LabApi.Extensions
 
         #region Single Message Dispatchers
         /// <summary>
-        /// Dispatches an intentionally modulated, corrupted vocal sequence across the global audio matrix, 
-        /// computing its final playback duration tracking envelope.
+        /// Dispatches a glitched CASSIE announcement and returns its estimated playback duration using the provided modifiers.
         /// </summary>
-        public static double DispatchGlitchyMessage(string message, float glitchChance, float jamChance, string glitchifierOutput)
+        public static double DispatchGlitchyMessage(string message, float glitchChance, float jamChance, string glitchifierOutput, CassiePlaybackModifiers modifiers = default)
         {
             string sanitizedOutput = glitchifierOutput.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedOutput)) return 0.0;
 
             try
             {
-                CassiePlaybackModifiers playbackModifiers = default;
-                playbackModifiers.Pitch = 0.95f;
-                Announcer.Message($"pitch_0.95 {sanitizedOutput}", string.Empty, playBackground: false);
-                return Announcer.CalculateDuration(sanitizedOutput, playbackModifiers);
+                Announcer.Message($"{sanitizedOutput}", string.Empty, playBackground: false);
+                return Announcer.CalculateDuration(sanitizedOutput, modifiers);
             }
             catch (Exception ex)
             {
@@ -44,19 +40,17 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Dispatches a clean, high-clarity vocal notification sequence using optimized high-pass pitch metrics across global facility channels.
+        /// Dispatches a standard CASSHE announcement and returns its estimated playback duration using the provided modifiers.
         /// </summary>
-        public static double DispatchMessage(string message)
+        public static double DispatchMessage(string message, CassiePlaybackModifiers modifiers = default)
         {
             string sanitizedMessage = message.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedMessage)) return 0.0;
 
             try
             {
-                CassiePlaybackModifiers playbackModifiers = default;
-                playbackModifiers.Pitch = 1.05f;
-                Announcer.Message($"pitch_1.05 {sanitizedMessage}", string.Empty, playBackground: false);
-                return Announcer.CalculateDuration(sanitizedMessage, playbackModifiers);
+                Announcer.Message($"{sanitizedMessage}", string.Empty, playBackground: false);
+                return Announcer.CalculateDuration(sanitizedMessage, modifiers);
             }
             catch (Exception ex)
             {
@@ -66,10 +60,9 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Executes defensive sanitization, structural sequence formatting, and real-time streaming transmission of CASSIE phrases 
-        /// under concrete queue priority matrices, optionally overriding active subtitle layers.
+        /// Sanitizes, formats, and dispatches a CASSIE announcement with custom subtitles and queue priority.
         /// </summary>
-        public static void ProcessAndDispatchMessage(string message, string customSubtitles, bool shouldClear, string pitchModifier, float priority, bool disableMessages = false)
+        public static void ProcessAndDispatchMessage(string message, string customSubtitles, bool shouldClear, float priority, bool disableMessages = false, CassiePlaybackModifiers modifiers = default)
         {
             string sanitizedMessage = message.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedMessage)) return;
@@ -78,17 +71,17 @@ namespace LabApi.Extensions
 
             string sanitizedSubtitles = customSubtitles.SanitizeCassieString();
             string processedSubtitles = (!string.IsNullOrEmpty(sanitizedSubtitles) && !disableMessages) ? sanitizedSubtitles : string.Empty;
-            string cleanPitch = string.IsNullOrWhiteSpace(pitchModifier) ? "pitch_1.0" : pitchModifier.Trim();
 
-            Announcer.Message($"{cleanPitch} {sanitizedMessage}", customSubtitles: processedSubtitles, priority: priority, playBackground: false);
+            // Note: If your native Announcer.Message overload supports CassiePlaybackModifiers, pass it as a parameter here.
+            Announcer.Message($"{sanitizedMessage}", customSubtitles: processedSubtitles, priority: priority, playBackground: false);
         }
         #endregion
 
         #region Batch Message Dispatchers (Zero-Allocation Internal Implementations)
         /// <summary>
-        /// Dispatches a collection of messages sequentially using high-performance iteration patterns.
+        /// Dispatches a collection of messages sequentially using the specified playback modifiers.
         /// </summary>
-        public static void DispatchMessage(IEnumerable<string> messages)
+        public static void DispatchMessage(IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
         {
             if (messages is null) return;
 
@@ -97,68 +90,70 @@ namespace LabApi.Extensions
                 int count = concreteList.Count;
                 for (int i = 0; i < count; i++)
                 {
-                    DispatchMessage(concreteList[i]);
+                    DispatchMessage(concreteList[i], modifiers);
                 }
                 return;
             }
 
             foreach (string message in messages)
             {
-                DispatchMessage(message);
+                DispatchMessage(message, modifiers);
             }
         }
 
         /// <summary>
-        /// Dispatches an inline array of messages sequentially.
+        /// Dispatches an inline array of messages sequentially using default playback modifiers.
         /// </summary>
         public static void DispatchMessage(params string[] messages)
+            => DispatchMessage(messages, default);
+
+        /// <summary>
+        /// Dispatches an inline array of messages sequentially using the specified playback modifiers.
+        /// </summary>
+        public static void DispatchMessage(CassiePlaybackModifiers modifiers, params string[] messages)
         {
             if (messages is null) return;
 
             int count = messages.Length;
             for (int i = 0; i < count; i++)
             {
-                DispatchMessage(messages[i]);
+                DispatchMessage(messages[i], modifiers);
             }
         }
         #endregion
 
         #region Utilities & Countdown Mechanics
         /// <summary>
-        /// Transforms a primitive integer value token into a structured CASSIE vocal countdown phonetic sequence format 
-        /// matching the specific operational context tracking threshold boundaries.
+        /// Converts a remaining time integer into a formatted CASSIE countdown announcement string.
         /// </summary>
-        public static string ToCassieCountdown(this int notifyTime, string alertContext = "Seconds until Event Detonation")
+        public static string ToCassieCountdown(this int notifyTime, string alertContext = "seconds until event detonation")
         {
             string sanitizedContext = alertContext.SanitizeCassieString();
-            if (string.IsNullOrEmpty(sanitizedContext)) sanitizedContext = "Seconds";
+            if (string.IsNullOrEmpty(sanitizedContext)) sanitizedContext = "seconds";
 
             return notifyTime switch
             {
                 < 5 => $".G3 {notifyTime} .G5",
-                >= 5 and <= 20 => $".G3 {notifyTime} Seconds .G5",
+                >= 5 and <= 20 => $".G3 {notifyTime} seconds .G5",
                 _ => $".G3 {notifyTime} {sanitizedContext} .G5"
             };
         }
 
         /// <summary>
-        /// Simulates the exact runtime execution footprint duration matching a specific message phrase sequence 
-        /// under a localized speed modification configuration envelope.
+        /// Calculates the playback duration of a single CASSIE message using the provided modifiers.
         /// </summary>
-        public static double CalculateCassieMessageDuration(string message, double speed = 0.99)
+        public static double CalculateCassieMessageDuration(string message, CassiePlaybackModifiers modifiers = default)
         {
             string sanitizedMessage = message.SanitizeCassieString();
             if (string.IsNullOrEmpty(sanitizedMessage)) return 0.0;
 
-            CassiePlaybackModifiers modifiers = default;
-            modifiers.Pitch = (float)speed;
             return Announcer.CalculateDuration(sanitizedMessage, modifiers);
         }
         #endregion
 
         #region Aggregation Overhead Loops (Zero-Allocation Internal Implementations)
         /// <summary>
-        /// Aggregates and computes total durations avoiding allocation-heavy LINQ structure parsing.
+        /// Calculates the total duration of a dictionary of messages, mapping each float value to a modifier pitch.
         /// </summary>
         public static double CalculateTotalMessagesDurations(IDictionary<string, float> messageSpeedDictionary)
         {
@@ -169,22 +164,26 @@ namespace LabApi.Extensions
             {
                 foreach (var kvp in concreteDict)
                 {
-                    cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, kvp.Value);
+                    CassiePlaybackModifiers modifiers = default;
+                    modifiers.Pitch = kvp.Value;
+                    cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, modifiers);
                 }
                 return cumulativeDuration;
             }
 
             foreach (var kvp in messageSpeedDictionary)
             {
-                cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, kvp.Value);
+                CassiePlaybackModifiers modifiers = default;
+                modifiers.Pitch = kvp.Value;
+                cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, modifiers);
             }
             return cumulativeDuration;
         }
 
         /// <summary>
-        /// Aggregates linear collection playback footprints over a zero-allocation sequential iteration map.
+        /// Calculates the cumulative playback duration for a collection of messages using the specified modifiers.
         /// </summary>
-        public static double CalculateTotalMessagesDurations(IEnumerable<string> messages, float defaultSpeed = 0.99f)
+        public static double CalculateTotalMessagesDurations(IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
         {
             if (messages is null) return 0.0;
 
@@ -194,22 +193,28 @@ namespace LabApi.Extensions
                 int count = concreteList.Count;
                 for (int i = 0; i < count; i++)
                 {
-                    cumulativeDuration += CalculateCassieMessageDuration(concreteList[i], defaultSpeed);
+                    cumulativeDuration += CalculateCassieMessageDuration(concreteList[i], modifiers);
                 }
                 return cumulativeDuration;
             }
 
             foreach (string message in messages)
             {
-                cumulativeDuration += CalculateCassieMessageDuration(message, defaultSpeed);
+                cumulativeDuration += CalculateCassieMessageDuration(message, modifiers);
             }
             return cumulativeDuration;
         }
 
         /// <summary>
-        /// High-performance overload routing parameters sequentially directly into structural loop wrappers.
+        /// Calculates the cumulative playback duration for an inline array of messages using default modifiers.
         /// </summary>
-        public static double CalculateTotalMessagesDurations(float defaultSpeed, params string[] messages)
+        public static double CalculateTotalMessagesDurations(params string[] messages)
+            => CalculateTotalMessagesDurations(messages, default);
+
+        /// <summary>
+        /// Calculates the cumulative playback duration for an inline array of messages using the specified modifiers.
+        /// </summary>
+        public static double CalculateTotalMessagesDurations(CassiePlaybackModifiers modifiers, params string[] messages)
         {
             if (messages is null || messages.Length == 0) return 0.0;
 
@@ -217,7 +222,7 @@ namespace LabApi.Extensions
             int count = messages.Length;
             for (int i = 0; i < count; i++)
             {
-                cumulativeDuration += CalculateCassieMessageDuration(messages[i], defaultSpeed);
+                cumulativeDuration += CalculateCassieMessageDuration(messages[i], modifiers);
             }
             return cumulativeDuration;
         }
