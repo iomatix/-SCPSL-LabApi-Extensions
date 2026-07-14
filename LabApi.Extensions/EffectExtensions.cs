@@ -1,6 +1,10 @@
-﻿using LabApi.Features.Wrappers;
+﻿using CustomPlayerEffects;
+using LabApi.Features.Enums;
+using LabApi.Features.Wrappers;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace LabApi.Extensions
 {
@@ -32,80 +36,323 @@ namespace LabApi.Extensions
     }
 
     /// <summary>
-    /// Provides extension methods for applying status effects to players.
+    /// Ultra high-performance extension methods for status effects management.
+    /// Eliminates boilerplate switches using JIT-compiled delegate array lookups.
     /// </summary>
     public static class EffectExtensions
     {
-        #region Single Player Operations
+        // Flat array caches providing O(1) direct index execution paths (faster than Dictionary lookup).
+        private static readonly Action<Player, byte, float>[] EnableDelegates;
+        private static readonly Action<Player>[] DisableDelegates;
+        private static readonly Func<Player, bool>[] HasDelegates;
+        private static readonly Func<Player, byte>[] IntensityDelegates;
+
+        /// <summary>
+        /// Static constructor - executes once at startup to meta-compile all status effect generic calls.
+        /// </summary>
+        static EffectExtensions()
+        {
+            var values = (FacilityEffectType[])Enum.GetValues(typeof(FacilityEffectType));
+
+            // Find the maximum enum integer value to dynamically size the lookup arrays.
+            int maxVal = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                int val = (int)values[i];
+                if (val > maxVal)
+                    maxVal = val;
+            }
+
+            int arraySize = maxVal + 1;
+            EnableDelegates = new Action<Player, byte, float>[arraySize];
+            DisableDelegates = new Action<Player>[arraySize];
+            HasDelegates = new Func<Player, bool>[arraySize];
+            IntensityDelegates = new Func<Player, byte>[arraySize];
+
+            // Access the game assembly containing native CustomPlayerEffects.
+            var effectsAssembly = typeof(StatusEffectBase).Assembly;
+
+            // Reuse parameters to avoid redundant expression rebuilding.
+            var playerParam = Expression.Parameter(typeof(Player), "player");
+            var intensityParam = Expression.Parameter(typeof(byte), "intensity");
+            var durationParam = Expression.Parameter(typeof(float), "duration");
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                var effect = values[i];
+                int index = (int)effect;
+                string effectName = effect.ToString();
+
+                // Dynamically resolve the corresponding CustomPlayerEffects class type by name.
+                Type effectType = effectsAssembly.GetType($"CustomPlayerEffects.{effectName}");
+                if (effectType == null)
+                {
+                    throw new TypeLoadException($"[LabApi.Extensions] Could not find native status effect class for: CustomPlayerEffects.{effectName}");
+                }
+
+                // 1. Compile EnableDelegate: (player, intensity, duration) => player.EnableEffect<T>(intensity, duration, false)
+                var enableMethod = typeof(Player).GetMethod("EnableEffect", new[] { typeof(byte), typeof(float), typeof(bool) })
+                                                 ?.MakeGenericMethod(effectType);
+                if (enableMethod != null)
+                {
+                    var enableCall = Expression.Call(playerParam, enableMethod, intensityParam, durationParam, Expression.Constant(false));
+                    EnableDelegates[index] = Expression.Lambda<Action<Player, byte, float>>(enableCall, playerParam, intensityParam, durationParam).Compile();
+                }
+
+                // 2. Compile DisableDelegate: (player) => player.DisableEffect<T>()
+                var disableMethod = typeof(Player).GetMethod("DisableEffect", Type.EmptyTypes)
+                                                  ?.MakeGenericMethod(effectType);
+                if (disableMethod != null)
+                {
+                    var disableCall = Expression.Call(playerParam, disableMethod);
+                    DisableDelegates[index] = Expression.Lambda<Action<Player>>(disableCall, playerParam).Compile();
+                }
+
+                // 3. Compile HasDelegate: (player) => player.HasEffect<T>()
+                var hasMethod = typeof(Player).GetMethod("HasEffect", Type.EmptyTypes)
+                                              ?.MakeGenericMethod(effectType);
+                if (hasMethod != null)
+                {
+                    var hasCall = Expression.Call(playerParam, hasMethod);
+                    HasDelegates[index] = Expression.Lambda<Func<Player, bool>>(hasCall, playerParam).Compile();
+                }
+
+                // 4. Compile IntensityDelegate: (player) => player.GetEffect<T>() != null ? player.GetEffect<T>().Intensity : 0
+                var getEffectMethod = typeof(Player).GetMethod("GetEffect", Type.EmptyTypes)
+                                                   ?.MakeGenericMethod(effectType);
+                if (getEffectMethod != null)
+                {
+                    var effectVar = Expression.Variable(effectType, "effect");
+                    var assign = Expression.Assign(effectVar, Expression.Call(playerParam, getEffectMethod));
+                    var intensityProp = typeof(StatusEffectBase).GetProperty("Intensity");
+
+                    var condition = Expression.Condition(
+                        Expression.NotEqual(effectVar, Expression.Constant(null, effectType)),
+                        Expression.Property(effectVar, intensityProp),
+                        Expression.Constant((byte)0)
+                    );
+
+                    var block = Expression.Block(new[] { effectVar }, assign, condition);
+                    IntensityDelegates[index] = Expression.Lambda<Func<Player, byte>>(block, playerParam).Compile();
+                }
+            }
+        }
+
+        #region Single Player - Enable Operations
+
         /// <summary>
         /// Enables a specific status effect on a single player.
         /// </summary>
         public static void EnableEffect(this Player player, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
         {
-            if (player?.GameObject is null) return;
+            if (player == null || !player.IsReady)
+                return;
 
-            switch (effect)
+            int index = (int)effect;
+            if (index >= 0 && index < EnableDelegates.Length)
             {
-                case FacilityEffectType.Blurred: player.EnableEffect<CustomPlayerEffects.Blurred>(intensity, duration); break;
-                case FacilityEffectType.Blindness: player.EnableEffect<CustomPlayerEffects.Blindness>(intensity, duration); break;
-                case FacilityEffectType.Flashed: player.EnableEffect<CustomPlayerEffects.Flashed>(intensity, duration); break;
-                case FacilityEffectType.Deafened: player.EnableEffect<CustomPlayerEffects.Deafened>(intensity, duration); break;
-                case FacilityEffectType.Slowness: player.EnableEffect<CustomPlayerEffects.Slowness>(intensity, duration); break;
-                case FacilityEffectType.SilentWalk: player.EnableEffect<CustomPlayerEffects.SilentWalk>(intensity, duration); break;
-                case FacilityEffectType.Exhausted: player.EnableEffect<CustomPlayerEffects.Exhausted>(intensity, duration); break;
-                case FacilityEffectType.Disabled: player.EnableEffect<CustomPlayerEffects.Disabled>(intensity, duration); break;
-                case FacilityEffectType.Bleeding: player.EnableEffect<CustomPlayerEffects.Bleeding>(intensity, duration); break;
-                case FacilityEffectType.Poisoned: player.EnableEffect<CustomPlayerEffects.Poisoned>(intensity, duration); break;
-                case FacilityEffectType.Burned: player.EnableEffect<CustomPlayerEffects.Burned>(intensity, duration); break;
-                case FacilityEffectType.Corroding: player.EnableEffect<CustomPlayerEffects.Corroding>(intensity, duration); break;
-                case FacilityEffectType.Concussed: player.EnableEffect<CustomPlayerEffects.Concussed>(intensity, duration); break;
-                case FacilityEffectType.Traumatized: player.EnableEffect<CustomPlayerEffects.Traumatized>(intensity, duration); break;
-                case FacilityEffectType.Invisible: player.EnableEffect<CustomPlayerEffects.Invisible>(intensity, duration); break;
-                case FacilityEffectType.Scp207: player.EnableEffect<CustomPlayerEffects.Scp207>(intensity, duration); break;
-                case FacilityEffectType.AntiScp207: player.EnableEffect<CustomPlayerEffects.AntiScp207>(intensity, duration); break;
-                case FacilityEffectType.MovementBoost: player.EnableEffect<CustomPlayerEffects.MovementBoost>(intensity, duration); break;
-                case FacilityEffectType.DamageReduction: player.EnableEffect<CustomPlayerEffects.DamageReduction>(intensity, duration); break;
-                case FacilityEffectType.RainbowTaste: player.EnableEffect<CustomPlayerEffects.RainbowTaste>(intensity, duration); break;
-                case FacilityEffectType.BodyshotReduction: player.EnableEffect<CustomPlayerEffects.BodyshotReduction>(intensity, duration); break;
-                case FacilityEffectType.Scp1853: player.EnableEffect<CustomPlayerEffects.Scp1853>(intensity, duration); break;
-                case FacilityEffectType.CardiacArrest: player.EnableEffect<CustomPlayerEffects.CardiacArrest>(intensity, duration); break;
-                case FacilityEffectType.InsufficientLighting: player.EnableEffect<CustomPlayerEffects.InsufficientLighting>(intensity, duration); break;
-                case FacilityEffectType.SoundtrackMute: player.EnableEffect<CustomPlayerEffects.SoundtrackMute>(intensity, duration); break;
-                case FacilityEffectType.SpawnProtected: player.EnableEffect<CustomPlayerEffects.SpawnProtected>(intensity, duration); break;
-                case FacilityEffectType.Ensnared: player.EnableEffect<CustomPlayerEffects.Ensnared>(intensity, duration); break;
-                case FacilityEffectType.Ghostly: player.EnableEffect<CustomPlayerEffects.Ghostly>(intensity, duration); break;
-                case FacilityEffectType.SeveredHands: player.EnableEffect<CustomPlayerEffects.SeveredHands>(intensity, duration); break;
-                case FacilityEffectType.Stained: player.EnableEffect<CustomPlayerEffects.Stained>(intensity, duration); break;
-                case FacilityEffectType.Vitality: player.EnableEffect<CustomPlayerEffects.Vitality>(intensity, duration); break;
-                case FacilityEffectType.Asphyxiated: player.EnableEffect<CustomPlayerEffects.Asphyxiated>(intensity, duration); break;
-                case FacilityEffectType.Decontaminating: player.EnableEffect<CustomPlayerEffects.Decontaminating>(intensity, duration); break;
-                case FacilityEffectType.PocketCorroding: player.EnableEffect<CustomPlayerEffects.PocketCorroding>(intensity, duration); break;
-                default: throw new ArgumentException($"[LabApi.Extensions] Unrecognized facility status effect mapping: {effect}");
+                EnableDelegates[index]?.Invoke(player, intensity, duration);
             }
         }
+
         #endregion
 
-        #region Batch & Params Operations (DRY, KISS, Zero-Allocation)
+        #region Single Player - Disable Operations
 
         /// <summary>
-        /// Enables a status effect for all players in the collection.
+        /// Disables a specific status effect on a single player.
+        /// </summary>
+        public static void DisableEffect(this Player player, FacilityEffectType effect)
+        {
+            if (player == null || !player.IsReady)
+                return;
+
+            int index = (int)effect;
+            if (index >= 0 && index < DisableDelegates.Length)
+            {
+                DisableDelegates[index]?.Invoke(player);
+            }
+        }
+
+        /// <summary>
+        /// Disables all active status effects on a player.
+        /// </summary>
+        public static void DisableAllEffects(this Player player)
+        {
+            if (player == null || !player.IsReady)
+                return;
+
+            player.DisableAllEffects();
+        }
+
+        #endregion
+
+        #region Single Player - Queries
+
+        /// <summary>
+        /// Returns true if the player has the specified status effect active.
+        /// </summary>
+        public static bool HasEffect(this Player player, FacilityEffectType effect)
+        {
+            if (player == null || !player.IsReady)
+                return false;
+
+            int index = (int)effect;
+            if (index >= 0 && index < HasDelegates.Length)
+            {
+                return HasDelegates[index]?.Invoke(player) ?? false;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the current intensity level (0-255) of the specified status effect on the player.
+        /// </summary>
+        public static byte GetEffectIntensity(this Player player, FacilityEffectType effect)
+        {
+            if (player == null || !player.IsReady)
+                return 0;
+
+            int index = (int)effect;
+            if (index >= 0 && index < IntensityDelegates.Length)
+            {
+                return IntensityDelegates[index]?.Invoke(player) ?? 0;
+            }
+
+            return 0;
+        }
+
+        #endregion
+
+        #region Batch Operations (True Zero-Allocation Paths)
+
+        /// <summary>
+        /// Enables a status effect for all players in the collection with zero heap allocations.
         /// </summary>
         public static void EnableEffect(this IEnumerable<Player> players, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
-            => players.ForEach(p => p?.EnableEffect(effect, intensity, duration));
+        {
+            if (players == null)
+                return;
+
+            if (players is Player[] array)
+            {
+                int count = array.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    array[i]?.EnableEffect(effect, intensity, duration);
+                }
+                return;
+            }
+
+            if (players is List<Player> list)
+            {
+                int count = list.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    list[i]?.EnableEffect(effect, intensity, duration);
+                }
+                return;
+            }
+
+            foreach (var player in players)
+            {
+                player?.EnableEffect(effect, intensity, duration);
+            }
+        }
 
         /// <summary>
-        /// Enables a status effect for all provided players (default intensity and duration).
+        /// Enables a status effect for all provided players.
         /// </summary>
         public static void EnableEffect(FacilityEffectType effect, params Player[] players)
-            => ((IEnumerable<Player>)players).EnableEffect(effect);
+            => players.EnableEffect(effect);
 
         /// <summary>
         /// Enables a status effect for all provided players with custom intensity and duration.
         /// </summary>
         public static void EnableEffect(FacilityEffectType effect, byte intensity, float duration, params Player[] players)
-            => ((IEnumerable<Player>)players).EnableEffect(effect, intensity, duration);
+            => players.EnableEffect(effect, intensity, duration);
+
+        /// <summary>
+        /// Disables a status effect for all players in the collection with zero heap allocations.
+        /// </summary>
+        public static void DisableEffect(this IEnumerable<Player> players, FacilityEffectType effect)
+        {
+            if (players == null)
+                return;
+
+            if (players is Player[] array)
+            {
+                int count = array.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    array[i]?.DisableEffect(effect);
+                }
+                return;
+            }
+
+            if (players is List<Player> list)
+            {
+                int count = list.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    list[i]?.DisableEffect(effect);
+                }
+                return;
+            }
+
+            foreach (var player in players)
+            {
+                player?.DisableEffect(effect);
+            }
+        }
+
+        /// <summary>
+        /// Disables a status effect for all provided players.
+        /// </summary>
+        public static void DisableEffect(FacilityEffectType effect, params Player[] players)
+            => players.DisableEffect(effect);
+
+        /// <summary>
+        /// Disables all status effects for all players in the collection with zero heap allocations.
+        /// </summary>
+        public static void DisableAllEffects(this IEnumerable<Player> players)
+        {
+            if (players == null)
+                return;
+
+            if (players is Player[] array)
+            {
+                int count = array.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    array[i]?.DisableAllEffects();
+                }
+                return;
+            }
+
+            if (players is List<Player> list)
+            {
+                int count = list.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    list[i]?.DisableAllEffects();
+                }
+                return;
+            }
+
+            foreach (var player in players)
+            {
+                player?.DisableAllEffects();
+            }
+        }
+
+        /// <summary>
+        /// Disables all status effects for all provided players.
+        /// </summary>
+        public static void DisableAllEffects(params Player[] players)
+            => players.DisableAllEffects();
 
         #endregion
-
     }
 }
