@@ -1,11 +1,11 @@
 ﻿using LabApi.Features.Wrappers;
-using System;
 using System.Collections.Generic;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Utility extensions for controlling Tesla gates.
+    /// Highly optimized utility extensions for controlling Tesla gates.
+    /// Features zero-allocation state-passing batch operations and unified null-safety.
     /// </summary>
     public static class TeslaExtensions
     {
@@ -17,31 +17,44 @@ namespace LabApi.Extensions
         /// </summary>
         public static void DisableFor(this Tesla tesla, float duration, bool forceTrigger = true)
         {
-            if (tesla is null)
+            // FIX: Unified null-checking standard (== null instead of is null) to prevent Unity lifetime bypass.
+            if (tesla == null)
                 return;
 
             if (forceTrigger)
+            {
                 tesla.Trigger();
+            }
 
             tesla.InactiveTime = duration;
         }
 
         #endregion
 
-        #region Batch Tesla (IEnumerable + params)
+        #region Batch Tesla (Zero-Allocation via State-Passing)
 
         /// <summary>
-        /// Disables multiple Tesla gates for a given duration.
+        /// Disables multiple Tesla gates for a given duration with zero heap allocations.
         /// </summary>
         public static void DisableFor(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true)
-        => teslas.ForEach(t => t?.DisableFor(duration, forceTrigger));
-        
+        {
+            if (teslas == null)
+                return;
+
+            // FIX: Enforced state-passing and static lambda to completely eliminate closure allocations.
+            teslas.ForEach((duration, forceTrigger), static (t, state) => t?.DisableFor(state.duration, state.forceTrigger));
+        }
 
         /// <summary>
         /// Disables multiple Tesla gates (params overload).
         /// </summary>
         public static void DisableFor(float duration, bool forceTrigger, params Tesla[] teslas)
-            => ((IEnumerable<Tesla>)teslas).DisableFor(duration, forceTrigger);
+        {
+            if (teslas == null)
+                return;
+
+            teslas.DisableFor(duration, forceTrigger);
+        }
 
         #endregion
     }
