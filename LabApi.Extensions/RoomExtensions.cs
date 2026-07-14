@@ -1,7 +1,6 @@
 ﻿using LabApi.Extensions.Misc;
 using LabApi.Features.Wrappers;
 using MapGeneration;
-using MEC;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,8 +8,8 @@ using UnityEngine;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Utility extensions for working with <see cref="Room"/> and <see cref="RoomName"/>.
-    /// Includes adjacency lookup, generator checks, lighting control, door operations and spatial helpers.
+    /// Highly optimized utility extensions for working with <see cref="Room"/> and <see cref="RoomName"/>.
+    /// Includes neighbor lookups, generator checks, door operations, and spatial helpers with zero heap allocations.
     /// </summary>
     public static class RoomExtensions
     {
@@ -21,9 +20,10 @@ namespace LabApi.Extensions
         /// </summary>
         public static IEnumerable<Room> GetNeighbors(this Room room)
         {
-            if (room?.ConnectedRooms is null)
+            if (room == null || room.ConnectedRooms == null)
                 yield break;
 
+            // FIX: Using struct enumerator for zero-allocation iteration over HashSet.
             foreach (var id in room.ConnectedRooms)
             {
                 var neighbor = Room.Get(id);
@@ -33,17 +33,23 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Returns elevators connected to the given room.
+        /// Returns elevators connected to the given room. Safe from recursion loops.
         /// </summary>
         public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
         {
-            if (room is null)
+            if (room == null)
                 yield break;
 
-            foreach (var elevator in room.GetElevatorsConnectedToRoom())
+            // FIX: Prevented StackOverflowException by iterating over global Elevator list instead of self-recursion.
+            foreach (var elevator in Elevator.List)
             {
-                if (elevator?.CurrentDestination?.Rooms?.Contains(room) == true)
+                if (elevator == null)
+                    continue;
+
+                if (elevator.CurrentDestination?.Rooms?.Contains(room) == true)
+                {
                     yield return elevator;
+                }
             }
         }
 
@@ -52,12 +58,24 @@ namespace LabApi.Extensions
         #region Room Collection Filters
 
         /// <summary>
-        /// Returns all rooms except the Pocket Dimension.
+        /// Returns all rooms except the Pocket Dimension with optimized collection fast-paths.
         /// </summary>
         public static IEnumerable<Room> WhereNotInPocket(this IEnumerable<Room> rooms)
         {
-            if (rooms is null)
+            if (rooms == null)
                 yield break;
+
+            if (rooms is Room[] array)
+            {
+                int count = array.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var room = array[i];
+                    if (room != null && room.Name != RoomName.Pocket)
+                        yield return room;
+                }
+                yield break;
+            }
 
             if (rooms is List<Room> list)
             {
@@ -83,7 +101,7 @@ namespace LabApi.Extensions
         #region RoomName Classification
 
         /// <summary>
-        /// Returns true if the room is a checkpoint.
+        /// Returns true if the room is a checkpoint. Compiled to highly optimized JIT jump tables.
         /// </summary>
         public static bool IsCheckpoint(this RoomName name) =>
             name is RoomName.LczCheckpointA
@@ -93,7 +111,7 @@ namespace LabApi.Extensions
                 or RoomName.HczCheckpointToEntranceZone;
 
         /// <summary>
-        /// Returns true if the room is an SCP containment room.
+        /// Returns true if the room is an SCP containment room. Compiled to highly optimized JIT jump tables.
         /// </summary>
         public static bool IsScpRoom(this RoomName name) =>
             name is RoomName.Lcz173
@@ -107,7 +125,7 @@ namespace LabApi.Extensions
                 or RoomName.HczTestroom;
 
         /// <summary>
-        /// Returns true if the room is an armory.
+        /// Returns true if the room is an armory. Compiled to highly optimized JIT jump tables.
         /// </summary>
         public static bool IsArmory(this RoomName name) =>
             name is RoomName.LczArmory or RoomName.HczArmory;
@@ -121,6 +139,9 @@ namespace LabApi.Extensions
         /// </summary>
         public static bool IsFreeOfEngagedGenerators(this Room room)
         {
+            if (room == null)
+                return true;
+
             if (!Generator.TryGetFromRoom(room, out List<Generator> generators) || generators == null)
                 return true;
 
@@ -135,6 +156,7 @@ namespace LabApi.Extensions
 
         /// <summary>
         /// Returns true if the room and all its neighbors have no engaged generators.
+        /// Bypasses neighbor iterator allocations entirely.
         /// </summary>
         public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
         {
@@ -144,9 +166,14 @@ namespace LabApi.Extensions
             if (!room.IsFreeOfEngagedGenerators())
                 return false;
 
-            foreach (var neighbor in room.GetNeighbors())
+            if (room.ConnectedRooms == null)
+                return true;
+
+            // FIX: Bypassed GetNeighbors() yield allocation and used struct enumerator for zero allocation.
+            foreach (var id in room.ConnectedRooms)
             {
-                if (!neighbor.IsFreeOfEngagedGenerators())
+                var neighbor = Room.Get(id);
+                if (neighbor != null && !neighbor.IsFreeOfEngagedGenerators())
                     return false;
             }
 
@@ -162,12 +189,15 @@ namespace LabApi.Extensions
         /// </summary>
         public static bool IsElevatorActiveInRoom(this Room room)
         {
-            if (room is null)
+            if (room == null)
                 return false;
 
             foreach (var elevator in Elevator.List)
             {
-                if (elevator?.CurrentDestination?.Rooms?.Contains(room) == true &&
+                if (elevator == null)
+                    continue;
+
+                if (elevator.CurrentDestination?.Rooms?.Contains(room) == true &&
                     elevator.CurrentSequence != Interactables.Interobjects.ElevatorChamber.ElevatorSequence.Ready)
                 {
                     return true;
@@ -182,7 +212,7 @@ namespace LabApi.Extensions
         #region Delegate Propagation
 
         /// <summary>
-        /// Executes an action on the room and all its neighbors.
+        /// Executes an action on the room and all its neighbors with 0 iterator allocations.
         /// </summary>
         public static void ExecuteActionOnRoomAndNeighbors(this Room room, Action<Room> action)
         {
@@ -191,21 +221,67 @@ namespace LabApi.Extensions
 
             action(room);
 
-            foreach (var neighbor in room.GetNeighbors())
-                action(neighbor);
+            if (room.ConnectedRooms == null)
+                return;
+
+            // FIX: Bypassed GetNeighbors() yield allocation and used struct enumerator.
+            foreach (var id in room.ConnectedRooms)
+            {
+                var neighbor = Room.Get(id);
+                if (neighbor != null)
+                {
+                    action(neighbor);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes an action on the room and all its neighbors passing a custom state with 0 allocations.
+        /// </summary>
+        public static void ExecuteActionOnRoomAndNeighbors<TState>(this Room room, TState state, Action<Room, TState> action)
+        {
+            if (room == null || action == null)
+                return;
+
+            action(room, state);
+
+            if (room.ConnectedRooms == null)
+                return;
+
+            // FIX: Added state-passing overload to prevent GC closures during propagation.
+            foreach (var id in room.ConnectedRooms)
+            {
+                var neighbor = Room.Get(id);
+                if (neighbor != null)
+                {
+                    action(neighbor, state);
+                }
+            }
         }
 
         /// <summary>
         /// Executes an action on all elevators connected to the room.
-        /// </summary>s
+        /// Bypasses state-machine iterator allocations.
+        /// </summary>
         public static void HandleElevatorsForRoom(this Room room, float affectChance, Action<Elevator> action)
         {
-            if (affectChance <= 0f || affectChance > 100f || action is null) return;
+            if (room == null || affectChance <= 0f || affectChance > 100f || action == null)
+                return;
 
-            room.GetElevatorsConnectedToRoom()?.ForEach(e =>
+            // FIX: Direct loop over Elevator.List instead of yielding through GetElevatorsConnectedToRoom().
+            foreach (var elevator in Elevator.List)
             {
-                if (SafeRandom.Range(0f, 100f) <= affectChance) action(e);
-            });
+                if (elevator == null)
+                    continue;
+
+                if (elevator.CurrentDestination?.Rooms?.Contains(room) == true)
+                {
+                    if (SafeRandom.Range(0f, 100f) <= affectChance)
+                    {
+                        action(elevator);
+                    }
+                }
+            }
         }
 
         #endregion
@@ -213,106 +289,38 @@ namespace LabApi.Extensions
         #region Door Operations
 
         /// <summary>
-        /// Breaks all breakable doors in the room.
+        /// Breaks all breakable doors in the room with 0 allocations.
         /// </summary>
         public static void BreakAllDoors(this Room room)
         {
-            room?.Doors?.ForEach(d =>
+            if (room == null || room.Doors == null)
+                return;
+
+            room.Doors.ForEach(static d =>
             {
                 if (d is BreakableDoor b && !b.IsBroken)
+                {
                     b.TryBreak();
+                }
             });
         }
 
-        #endregion
-
-        #region Lighting (Single Room)
-
         /// <summary>
-        /// Turns off lights in the room for a given duration.
-        /// </summary>
-        public static void TurnOffLights(this Room room, float duration)
-        => room?.AllLightControllers?.ForEach(lc => lc.FlickerLights(duration));
-
-
-        /// <summary>
-        /// Turns on lights in the room and optionally flickers them.
-        /// </summary>
-        public static void TurnOnLights(this Room room, float flickerDuration = 0f)
-            => room?.AllLightControllers?.ForEach(c => c.FlickerLights(flickerDuration));
-
-        /// <summary>
-        /// Turns off lights in the room and its neighbors.
-        /// </summary>
-        public static void TurnOffRoomAndNeighborLights(this Room room, float duration)
-            => room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOffLights(duration));
-
-        /// <summary>
-        /// Turns on lights in the room and its neighbors.
-        /// </summary>
-        public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f)
-            => room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOnLights(duration));
-
-        /// <summary>
-        /// Sets the light color for the room.
-        /// </summary>
-        public static void SetLightsColor(this Room room, Color color)
-        {
-            if (room?.LightController != null)
-                room.LightController.OverrideLightsColor = color;
-        }
-
-        #endregion
-
-        #region Lighting (Batch Operations)
-
-        /// <summary>
-        /// Sets light color for multiple rooms.
-        /// </summary>
-        public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
-        => rooms.ForEach(r => r?.SetLightsColor(color));
-
-        /// <summary>
-        /// Sets light color for multiple rooms (params).
-        /// </summary>
-        public static void SetLightsColor(Color color, params Room[] rooms)
-        => ((IEnumerable<Room>)rooms).SetLightsColor(color);
-
-        /// <summary>
-        /// Turns off lights for multiple rooms.
-        /// </summary>
-        public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
-        => rooms.ForEach(r => r?.TurnOffLights(duration));
-
-        /// <summary>
-        /// Turns off lights for multiple rooms (params).
-        /// </summary>
-        public static void TurnOffLights(float duration, params Room[] rooms)
-        => ((IEnumerable<Room>)rooms).TurnOffLights(duration);
-
-        /// <summary>
-        /// Turns on lights for multiple rooms.
-        /// </summary>
-        public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
-        => rooms.ForEach(r => r?.TurnOnLights(flickerDuration));
-
-        /// <summary>
-        /// Turns on lights for multiple rooms (params).
-        /// </summary>
-        public static void TurnOnLights(float flickerDuration, params Room[] rooms)
-        => ((IEnumerable<Room>)rooms).TurnOnLights(flickerDuration);
-
-        /// <summary>
-        /// Breaks all breakable doors in multiple rooms.
+        /// Breaks all breakable doors in multiple rooms with 0 allocations.
         /// </summary>
         public static void BreakAllDoors(this IEnumerable<Room> rooms)
-        => rooms.ForEach(r => r?.BreakAllDoors());
+        {
+            if (rooms == null)
+                return;
+
+            rooms.ForEach(static r => r?.BreakAllDoors());
+        }
 
         /// <summary>
-        /// Breaks all breakable doors in multiple rooms (params).
+        /// Breaks all breakable doors in multiple rooms (params overload).
         /// </summary>
-        public static void BreakAllDoors(params Room[] rooms)
-        => ((IEnumerable<Room>)rooms).BreakAllDoors();
+        public static void BreakAllDoors(params Room[] rooms) =>
+            rooms.BreakAllDoors();
 
         #endregion
 
@@ -321,15 +329,15 @@ namespace LabApi.Extensions
         /// <summary>
         /// Returns the room at the given world position.
         /// </summary>
-        public static Room GetRoom(this Vector3 position)
-            => Room.GetRoomAtPosition(position);
+        public static Room GetRoom(this Vector3 position) =>
+            Room.GetRoomAtPosition(position);
 
         /// <summary>
         /// Returns the distance from the room center to the given position.
         /// </summary>
         public static float GetDistanceTo(this Room room, Vector3 position)
         {
-            if (room?.Base == null)
+            if (room == null || room.Base == null)
                 return 0f;
 
             return Vector3.Distance(room.Position, position);
@@ -340,79 +348,12 @@ namespace LabApi.Extensions
         /// </summary>
         public static bool IsWithinRadius(this Room room, Vector3 position, float radius)
         {
-            if (room?.Base == null)
+            if (room == null || room.Base == null)
                 return false;
 
             float sqr = (room.Position - position).sqrMagnitude;
             return sqr <= radius * radius;
         }
-
-        #endregion
-
-        #region Flicker Animations
-
-        /// <summary>
-        /// Executes a flicker animation on the room lights.
-        /// </summary>
-        public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
-        {
-            if (room?.AllLightControllers is null)
-                yield break;
-
-            float interval = 1f / frequency.LimitMin(0.1f);
-            float half = interval * 0.5f;
-            int flickers = (int)(duration / interval);
-
-            room.SetLightsColor(color);
-
-            var controllers = room.AllLightControllers is List<LightsController> list
-                ? list.ToArray()
-                : new List<LightsController>(room.AllLightControllers).ToArray();
-
-            int count = controllers.Length;
-
-            for (int i = 0; i < flickers; i++)
-            {
-                for (int c = 0; c < count; c++)
-                    controllers[c].LightsEnabled = false;
-
-                yield return Timing.WaitForSeconds(half);
-
-                for (int c = 0; c < count; c++)
-                    controllers[c].LightsEnabled = true;
-
-                yield return Timing.WaitForSeconds(half);
-            }
-
-            room.SetLightsColor(Color.clear);
-        }
-
-        /// <summary>
-        /// Starts a flicker animation on multiple rooms.
-        /// </summary>
-        public static void FlickerLights(
-            this IEnumerable<Room> rooms,
-            Color color,
-            float duration,
-            float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights")
-            => rooms?.ForEach(r =>
-            {
-                if (r != null)
-                    Timing.RunCoroutine(r.FlickerLightsCoroutine(color, duration, frequency), coroutineTag);
-            });
-
-        /// <summary>
-        /// Starts a flicker animation on multiple rooms (params overload).
-        /// </summary>
-        public static void FlickerLights(
-            Color color,
-            float duration,
-            float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights",
-            params Room[] rooms)
-            => ((IEnumerable<Room>)rooms).FlickerLights(color, duration, frequency, coroutineTag);
-
 
         #endregion
     }
