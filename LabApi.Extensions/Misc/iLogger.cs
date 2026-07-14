@@ -1,99 +1,150 @@
 ﻿using LabApi.Features.Console;
+using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace LabApi.Extensions.Misc
 {
     /// <summary>
-    /// Provides an enterprise-grade centralized logging matrix for the iomatix ecosystem,
-    /// natively bridging runtime configuration metadata checks with the underlying LabAPI console engine.
+    /// Centralized logging utility providing fast, structured console outputs with automatic full call-path resolution.
     /// </summary>
     public static class iLogger
     {
-        #region Informational Broadcasters
-        /// <summary>
-        /// Dispatches a standardized informational telemetry entry directly onto the global console stream interface.
-        /// </summary>
-        /// <param name="message">The structural runtime notification string text payload targeted for transmission.</param>
-        public static void Info(string message) => Logger.Info(message);
+        // FIX: High-performance cache mapped by MethodBase to instantly resolve full dotted call paths with 0 heap overhead.
+        private static readonly ConcurrentDictionary<MethodBase, string> _callPathCache = new();
 
         /// <summary>
-        /// Dispatches an informational trace message bound into a discrete, bracketed subsystem contextual source tag.
+        /// Automatically resolves and caches the full dotted call path (Namespace.Class.Method) of the caller.
         /// </summary>
-        /// <param name="source">The operational identifier tracking the originating system module domain location.</param>
-        /// <param name="message">The structural runtime notification string text payload targeted for transmission.</param>
-        public static void Info(string source, string message) => Logger.Info($"[{source}] {message}");
+        private static string GetDefaultSource()
+        {
+            // Skip 2 frames: Frame 0 is GetDefaultSource, Frame 1 is the iLogger method (Info/Warn), Frame 2 is the actual plugin method!
+            MethodBase callingMethod = new StackFrame(2, false).GetMethod();
+
+            if (callingMethod == null)
+                return "Unknown";
+
+            if (!_callPathCache.TryGetValue(callingMethod, out string callPath))
+            {
+                string typeName = callingMethod.DeclaringType?.FullName ?? "UnknownContext";
+                string methodName = callingMethod.Name;
+
+                // Generates e.g. "LabApi.Extensions.Escape.EscapeEngine.ProcessPlayerEscape"
+                callPath = string.Concat(typeName, ".", methodName);
+                _callPathCache[callingMethod] = callPath;
+            }
+
+            return callPath;
+        }
+
+        #region Informational Broadcasters
+
+        /// <summary>
+        /// Logs an informational message, automatically resolving the full dotted call path.
+        /// </summary>
+        public static void Info(string message)
+            => Logger.Info(string.Concat("[", GetDefaultSource(), "] ", message));
+
+        /// <summary>
+        /// Logs an informational message with a specified custom tag.
+        /// </summary>
+        public static void Info(string source, string message)
+            => Logger.Info(string.Concat("[", source, "] ", message));
+
         #endregion
 
         #region Warning Alert Core
-        /// <summary>
-        /// Captures a non-fatal anomaly alert execution sequence or automated threshold correction trace to indicate soft system variances.
-        /// </summary>
-        /// <param name="message">The detailed descriptive warning text sequence tracking the non-fatal anomaly event bounds.</param>
-        public static void Warn(string message) => Logger.Warn(message);
 
         /// <summary>
-        /// Captures a non-fatal anomaly alert execution sequence bound within a distinct tracking domain header tag.
+        /// Logs a warning message, automatically resolving the full dotted call path.
         /// </summary>
-        /// <param name="source">The operational identifier tracking the originating layout sector producing the warning event.</param>
-        /// <param name="message">The detailed descriptive warning text sequence tracking the non-fatal anomaly event bounds.</param>
-        public static void Warn(string source, string message) => Logger.Warn($"[{source}] {message}");
+        public static void Warn(string message)
+            => Logger.Warn(string.Concat("[", GetDefaultSource(), "] ", message));
+
+        /// <summary>
+        /// Logs a warning message with a specified custom tag.
+        /// </summary>
+        public static void Warn(string source, string message)
+            => Logger.Warn(string.Concat("[", source, "] ", message));
+
         #endregion
 
         #region Exception and Error Handlers
-        /// <summary>
-        /// Records a critical runtime failure path or exceptional pipeline interruption that severely compromises system integrity.
-        /// </summary>
-        /// <param name="message">The raw exceptional error trace description text layout targeting the logging grid.</param>
-        public static void Error(string message) => Logger.Error(message);
 
         /// <summary>
-        /// Records a critical runtime failure trace wrapped inside a contextual tracking system exception identifier tag.
+        /// Logs an error message, automatically resolving the full dotted call path.
         /// </summary>
-        /// <param name="source">The concrete architectural infrastructure module or component instance registering the underlying crash tracking telemetry.</param>
-        /// <param name="message">The raw exceptional error trace description text layout targeting the logging grid.</param>
-        public static void Error(string source, string message) => Logger.Error($"[{source}] {message}");
+        public static void Error(string message)
+            => Logger.Error(string.Concat("[", GetDefaultSource(), "] ", message));
+
+        /// <summary>
+        /// Logs an error message with a specified custom tag.
+        /// </summary>
+        public static void Error(string source, string message)
+            => Logger.Error(string.Concat("[", source, "] ", message));
+
         #endregion
 
-        #region Production-Grade Debug Diagnostic Vector
+        #region Debug Diagnostic Overloads
+
         /// <summary>
-        /// Routes a low-level diagnostic trace message onto the console output pipe conditionally based on a production runtime state evaluation block.
-        /// Safely insulates live server allocations against verbose data pollution during standard execution deployments.
+        /// Logs a debug message if debugging is enabled, automatically resolving the full dotted call path.
         /// </summary>
-        /// <param name="message">The granular evaluation string sequence mapping real-time asset properties or system parameters.</param>
-        /// <param name="isDebugEnabled">The runtime configuration Boolean state toggle controlling active message stream output generation.</param>
         public static void Debug(string message, bool isDebugEnabled)
         {
             if (isDebugEnabled)
             {
-                Logger.Debug($"[DEBUG] {message}");
+                Logger.Debug(string.Concat("[", GetDefaultSource(), "] [DEBUG] ", message));
             }
         }
 
         /// <summary>
-        /// Routes a contextual low-level trace sequence wrapped inside an explicit subsystem domain tag if live diagnostics evaluate to true.
+        /// Logs a debug message with a custom tag if debugging is enabled.
         /// </summary>
-        /// <param name="source">The sub-system infrastructure label originating the granular diagnostic evaluation telemetry stream.</param>
-        /// <param name="message">The granular evaluation string sequence mapping real-time asset properties or system parameters.</param>
-        /// <param name="isDebugEnabled">The runtime configuration Boolean state toggle controlling active message stream output generation.</param>
         public static void Debug(string source, string message, bool isDebugEnabled)
         {
             if (isDebugEnabled)
             {
-                Logger.Debug($"[{source}] [DEBUG] {message}");
+                Logger.Debug(string.Concat("[", source, "] [DEBUG] ", message));
             }
         }
 
         /// <summary>
-        /// Executes an aggressive, highly detailed debugging pipeline trace. Active exclusively during local local IDE sandbox compilation phases.
-        /// Completely omitted and stripped out by the compiler in release builds to guarantee absolute zero deployment allocation footprints.
+        /// Logs a debug message using deferred evaluation, automatically resolving the full dotted call path.
         /// </summary>
-        /// <param name="source">The internal structural signature pinpointing the code execution node path tracking.</param>
-        /// <param name="message">The heavy raw dump literal tracking data payload evaluated during runtime code validation.</param>
+        public static void Debug(Func<string> messageFactory, bool isDebugEnabled)
+        {
+            if (isDebugEnabled && messageFactory != null)
+            {
+                Logger.Debug(string.Concat("[", GetDefaultSource(), "] [DEBUG] ", messageFactory()));
+            }
+        }
+
+        /// <summary>
+        /// Logs a debug message with a custom tag using deferred evaluation.
+        /// </summary>
+        public static void Debug(string source, Func<string> messageFactory, bool isDebugEnabled)
+        {
+            if (isDebugEnabled && messageFactory != null)
+            {
+                Logger.Debug(string.Concat("[", source, "] [DEBUG] ", messageFactory()));
+            }
+        }
+
+        #endregion
+
+        #region Local Trace (Stripped in Release Builds)
+
+        /// <summary>
+        /// Logs a detailed local trace message. This call is completely stripped out by the compiler in Release builds.
+        /// </summary>
         [Conditional("DEBUG")]
         public static void LocalTrace(string source, string message)
         {
-            Logger.Debug($"[{source}] [LOCAL-TRACE] {message}");
+            Logger.Debug(string.Concat("[", source, "] [LOCAL-TRACE] ", message));
         }
+
         #endregion
     }
 }
