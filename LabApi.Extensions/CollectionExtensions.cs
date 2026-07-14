@@ -48,6 +48,43 @@ namespace LabApi.Extensions
             }
         }
 
+        /// <summary>
+        /// Executes the specified action for every item in the collection with zero runtime allocations,
+        /// passing a custom state to completely prevent GC closure (lambda display class) allocations.
+        /// </summary>
+        public static void ForEach<T, TState>(this IEnumerable<T> source, TState state, Action<T, TState> action)
+        {
+            if (source == null || action == null)
+                return;
+
+            // Fast path for arrays - 0 allocations, highly optimized by JIT
+            if (source is T[] array)
+            {
+                int count = array.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    action(array[i], state);
+                }
+                return;
+            }
+
+            // Fast path for Lists - 0 allocations, avoids Enumerator boxing
+            if (source is List<T> list)
+            {
+                int count = list.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    action(list[i], state);
+                }
+                return;
+            }
+
+            // Fallback for general collections
+            foreach (var item in source)
+            {
+                action(item, state);
+            }
+        }
         #region Throttle Model (Stores Last Execution Time)
 
         /// <summary>
