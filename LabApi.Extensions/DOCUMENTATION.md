@@ -2,20 +2,14 @@
 
 ## 📦 Class: ActionChainExtensions
 
-### 🔹 `CreateChain()`
-**Description:** Initiates a clean, type-safe, fluent action orchestration chain bound to this target instance context.
-```csharp
-public static ActionChain<T> CreateChain<T>(this T target) where T : class
-```
-
 ---
 
 ## 📦 Class: AssemblyExtensions
 
 ### 🔹 `FindEmbeddedAsset()`
-**Description:** Dynamically resolves an embedded manifest resource pathway matching primary identifiers or structural fallback names.
+**Description:** Finds an embedded resource inside the assembly. Looks for: primaryKey + extension, primaryKey with dots replaced by underscores, or any fallback token. Full manifest resource path if found; otherwise <c>null</c>. </returns>
 ```csharp
-public static string FindEmbeddedAsset(this Assembly assembly, string primaryKey, string fileExtension = ".wav", params string[] alternativeTokens)
+public static string FindEmbeddedAsset( this Assembly assembly, string primaryKey, string fileExtension = ".wav", params string[] alternativeTokens)
 ```
 
 ---
@@ -23,107 +17,113 @@ public static string FindEmbeddedAsset(this Assembly assembly, string primaryKey
 ## 📦 Class: CassieExtensions
 
 ### 🔹 `SanitizeCassieString()`
-**Description:** Sanitizes a raw CASSIE string by removing carriage returns, replacing newlines with spaces, and trimming whitespace.
+**Description:** Removes CR/LF and trims whitespace for safe CASSIE usage.
 ```csharp
 public static string SanitizeCassieString(this string rawMessage) => string.IsNullOrWhiteSpace(rawMessage) ? string.Empty : rawMessage.Replace("\r", "").Replace("\n", " ").Trim();
 ```
 
 ### 🔹 `DispatchGlitchyMessage()`
-**Description:** Glitchifies the specified message internally and dispatches the announcement, returning its playback duration.
+**Description:** Glitchifies and dispatches a message, returning playback duration.
 ```csharp
 public static double DispatchGlitchyMessage(string message, float glitchChance, float jamChance)
 ```
 
 ### 🔹 `DispatchMessage()`
-**Description:** Dispatches a standard CASSHE announcement and returns its estimated playback duration using the provided modifiers.
+**Description:** Dispatches a standard CASSIE message and returns playback duration.
 ```csharp
 public static double DispatchMessage(string message, CassiePlaybackModifiers modifiers = default)
 ```
 
 ### 🔹 `ProcessAndDispatchMessage()`
-**Description:** Sanitizes, formats, and dispatches a CASSIE announcement with custom subtitles and queue priority.
+**Description:** Dispatches a formatted CASSIE message with optional subtitles and priority.
 ```csharp
-public static void ProcessAndDispatchMessage(string message, string customSubtitles, bool shouldClear, float priority, bool disableMessages = false, CassiePlaybackModifiers modifiers = default)
+public static void ProcessAndDispatchMessage(string message, string subtitles, bool clear, float priority, bool disableMessages = false, CassiePlaybackModifiers modifiers = default)
 ```
 
 ### 🔹 `DispatchMessage()`
-**Description:** Dispatches a collection of messages sequentially using the specified playback modifiers.
+**Description:** Dispatches all messages in the collection.
 ```csharp
-public static void DispatchMessage(IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
+public static void DispatchMessage(this IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default) => messages.ForEach(m => DispatchMessage(m, modifiers));
 ```
 
 ### 🔹 `DispatchMessage()`
-**Description:** Dispatches an inline array of messages sequentially using default playback modifiers.
+**Description:** Dispatches all provided messages (default modifiers).
 ```csharp
-public static void DispatchMessage(params string[] messages) => DispatchMessage(messages, default);
+public static void DispatchMessage(params string[] messages) => ((IEnumerable<string>)messages).DispatchMessage(default);
 ```
 
 ### 🔹 `DispatchMessage()`
-**Description:** Dispatches an inline array of messages sequentially using the specified playback modifiers.
+**Description:** Dispatches all provided messages with custom modifiers.
 ```csharp
-public static void DispatchMessage(CassiePlaybackModifiers modifiers, params string[] messages)
+public static void DispatchMessage(CassiePlaybackModifiers modifiers, params string[] messages) => ((IEnumerable<string>)messages).DispatchMessage(modifiers);
 ```
 
 ### 🔹 `ToCassieCountdown()`
-**Description:** Converts a remaining time integer into a formatted CASSIE countdown announcement string.
+**Description:** Converts an integer into a formatted CASSIE countdown string.
 ```csharp
-public static string ToCassieCountdown(this int notifyTime, string alertContext = "seconds until event detonation")
+public static string ToCassieCountdown(this int notifyTime, string context = "seconds until event detonation")
 ```
 
 ### 🔹 `CalculateCassieMessageDuration()`
-**Description:** Calculates the playback duration of a single CASSIE message using the provided modifiers.
+**Description:** Calculates playback duration of a single message.
 ```csharp
 public static double CalculateCassieMessageDuration(string message, CassiePlaybackModifiers modifiers = default)
 ```
 
 ### 🔹 `CalculateTotalMessagesDurations()`
-**Description:** Calculates the total duration of a dictionary of messages, mapping each float value to a modifier pitch.
+**Description:** Calculates total duration of messages with per-message pitch modifiers.
 ```csharp
 public static double CalculateTotalMessagesDurations(IDictionary<string, float> messageSpeedDictionary)
 ```
 
 ### 🔹 `CalculateTotalMessagesDurations()`
-**Description:** Calculates the cumulative playback duration for a collection of messages using the specified modifiers.
+**Description:** Calculates total duration of all messages in the collection.
 ```csharp
-public static double CalculateTotalMessagesDurations(IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
+public static double CalculateTotalMessagesDurations(this IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
 ```
 
 ### 🔹 `CalculateTotalMessagesDurations()`
-**Description:** Calculates the cumulative playback duration for an inline array of messages using default modifiers.
+**Description:** Calculates total duration of provided messages (default modifiers).
 ```csharp
-public static double CalculateTotalMessagesDurations(params string[] messages) => CalculateTotalMessagesDurations(messages, default);
+public static double CalculateTotalMessagesDurations(params string[] messages) => ((IEnumerable<string>)messages).CalculateTotalMessagesDurations(default);
 ```
 
 ### 🔹 `CalculateTotalMessagesDurations()`
-**Description:** Calculates the cumulative playback duration for an inline array of messages using the specified modifiers.
+**Description:** Calculates total duration of provided messages with custom modifiers.
 ```csharp
-public static double CalculateTotalMessagesDurations(CassiePlaybackModifiers modifiers, params string[] messages)
+public static double CalculateTotalMessagesDurations(CassiePlaybackModifiers modifiers, params string[] messages) => ((IEnumerable<string>)messages).CalculateTotalMessagesDurations(modifiers);
 ```
 
 ---
 
 ## 📦 Class: CollectionExtensions
 
+### 🔹 `ForEach()`
+**Description:** Runs the action for every item in the collection. Uses a zero‑allocation fast‑path for List<T>.
+```csharp
+public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
+```
+
 ### 🔹 `ExecuteThrottled()`
-**Description:** Evaluates a temporal cooldown window for a specific key profile. If the tracking node is ready, executes the payload and automatically commits the new timestamp. <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
+**Description:** Executes the action if the cooldown for the key has elapsed. Updates the timestamp and returns true if executed.
 ```csharp
 public static bool ExecuteThrottled<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan window, Action throttleAction)
 ```
 
 ### 🔹 `PruneExpired()`
-**Description:** Systematically purges all historical mapping entries whose tracking timestamps have safely elapsed past a specific temporal comparison index. Mitigates collection modification exceptions by isolating target records dynamically via zero-allocation memory pooling. <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
+**Description:** Removes all entries whose timestamps are older than the comparison time.
 ```csharp
 public static void PruneExpired<TKey>(this IDictionary<TKey, DateTime> dictionary, DateTime comparisonTime)
 ```
 
 ### 🔹 `IsCooldownActive()`
-**Description:** Evaluates defensively whether a specific key profile is currently locked within an active temporal cooldown window. <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
+**Description:** Returns true if the key exists and its cooldown has not yet expired.
 ```csharp
 public static bool IsCooldownActive<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key)
 ```
 
 ### 🔹 `TryAcquireLock()`
-**Description:** Atomically evaluates a temporal gate check for a specific key target. If the lock window has elapsed, automatically commits a new future expiration milestone and grants authorization. <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
+**Description:** Returns true if the cooldown has elapsed and commits a new expiration timestamp.
 ```csharp
 public static bool TryAcquireLock<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan lockWindow)
 ```
@@ -133,19 +133,19 @@ public static bool TryAcquireLock<TKey>(this IDictionary<TKey, DateTime> cooldow
 ## 📦 Class: CommandExtensions
 
 ### 🔹 `ConfirmPermission()`
-**Description:** Defensively verifies if the command sender possesses the required administrative permission tracking profile. Automatically grants authorization if the command originated from the native Server Console.
+**Description:** Returns true if the sender has the required permission. Server console always passes.
 ```csharp
 public static bool ConfirmPermission(this ICommandSender sender, PlayerPermissions permission, out string errorResponse)
 ```
 
 ### 🔹 `TryGetFloat()`
-**Description:** Safely attempts to extract and parse a single-precision floating-point scalar variable from the raw arguments segment layout.
+**Description:** Tries to read a float from the argument list.
 ```csharp
 public static bool TryGetFloat(this ArraySegment<string> arguments, int index, out float value, float minValue = float.MinValue)
 ```
 
 ### 🔹 `TryGetInt()`
-**Description:** Safely attempts to extract and parse a signed 32-bit integer data variable from the raw arguments segment layout.
+**Description:** Tries to read an int from the argument list.
 ```csharp
 public static bool TryGetInt(this ArraySegment<string> arguments, int index, out int value, int minValue = int.MinValue)
 ```
@@ -165,129 +165,141 @@ public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp
 ## 📦 Class: DoorExtensions
 
 ### 🔹 `IsOpen()`
-**Description:** Evaluates the underlying structural state of the specified door entity to determine if it is currently unsealed.
+**Description:** Returns true if the door is open.
 ```csharp
 public static bool IsOpen(this Door door) => door != null && door.IsOpened;
 ```
 
-### 🔹 `Toggle()`
-**Description:** Inverts the operational passage status of the targeted door instance, executing a swift state mutation between open and closed topologies defensively.
-```csharp
-public static void Toggle(this Door door)
-```
-
 ### 🔹 `WhereNameIn()`
-**Description:** Filters a sequence of doors to return only those matching any of the specified <see cref="DoorName"/> tokens. Leverages lazy streaming pipelines to guarantee absolute zero heap allocation metrics.
+**Description:** Returns only doors whose DoorName matches any of the provided names.
 ```csharp
 public static IEnumerable<Door> WhereNameIn(this IEnumerable<Door> doors, params DoorName[] names)
 ```
 
 ### 🔹 `Open()`
-**Description:** Fluently unseals an individual door instance, driving its structural passage topology state to open.
+**Description:** Opens the door.
 ```csharp
-public static void Open(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: true, bypassLocks);
+public static void Open(this Door door, bool bypassLocks = false) => door.SetOpenState(true, bypassLocks);
 ```
 
 ### 🔹 `Close()`
-**Description:** Fluently seals an individual door instance, driving its structural passage topology state to closed.
+**Description:** Closes the door.
 ```csharp
-public static void Close(this Door door, bool bypassLocks = false) => door.SetOpenState(opened: false, bypassLocks);
+public static void Close(this Door door, bool bypassLocks = false) => door.SetOpenState(false, bypassLocks);
+```
+
+### 🔹 `Toggle()`
+**Description:** Toggles the door open/closed state.
+```csharp
+public static void Toggle(this Door door)
 ```
 
 ### 🔹 `SetLockState()`
-**Description:** Updates the administrative server-side lock state of an individual door instance under a specific constraint reason.
+**Description:** Sets or removes a lock reason on the door.
 ```csharp
 public static void SetLockState(this Door door, DoorLockReason reason, bool locked = true)
 ```
 
 ### 🔹 `SetOpenState()`
-**Description:** Mutates the passage activation status (Open or Closed topology) of an individual door instance. This method acts as the single source of truth for all door state mutations.
+**Description:** Sets the open/closed state of the door. This is the single source of truth for door state changes.
 ```csharp
 public static void SetOpenState(this Door door, bool opened, bool bypassLocks = false)
 ```
 
 ### 🔹 `OpenAndLock()`
-**Description:** Forcibly unseals an individual door and applies an administrative server-side lock state under a specific structural reason constraint.
+**Description:** Opens the door (if safe) and immediately applies a lock reason.
 ```csharp
 public static void OpenAndLock(this Door door, DoorLockReason reason, bool playSound = true)
 ```
 
 ### 🔹 `Open()`
-**Description:** Attempts to mass unseal a collection of doors cleanly.
+**Description:** Opens all doors.
 ```csharp
-public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false)
+public static void Open(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.ForEach(d => d?.Open(bypassLocks));
 ```
 
 ### 🔹 `Open()`
-**Description:** Attempts to mass unseal an inline array of doors cleanly.
+**Description:** Opens all provided doors.
 ```csharp
-public static void Open(bool bypassLocks, params Door[] doors)
+public static void Open(bool bypassLocks, params Door[] doors) => ((IEnumerable<Door>)doors).Open(bypassLocks);
 ```
 
 ### 🔹 `Close()`
-**Description:** Attempts to mass seal a collection of doors cleanly.
+**Description:** Closes all doors.
 ```csharp
-public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false)
+public static void Close(this IEnumerable<Door> doors, bool bypassLocks = false) => doors.ForEach(d => d?.Close(bypassLocks));
 ```
 
 ### 🔹 `Close()`
-**Description:** Attempts to mass seal an inline array of doors cleanly.
+**Description:** Closes all provided doors.
 ```csharp
-public static void Close(bool bypassLocks, params Door[] doors)
+public static void Close(bool bypassLocks, params Door[] doors) => ((IEnumerable<Door>)doors).Close(bypassLocks);
 ```
 
 ### 🔹 `SetLockState()`
-**Description:** Forcibly updates the administrative server-side lock state across a collection of doors.
+**Description:** Sets lock state for all doors.
 ```csharp
-public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason, bool locked = true)
+public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason, bool locked = true) => doors.ForEach(d => d?.SetLockState(reason, locked));
 ```
 
 ### 🔹 `SetLockState()`
-**Description:** Forcibly updates the administrative server-side lock state across an inline array of doors.
+**Description:** Sets lock state for all provided doors.
 ```csharp
-public static void SetLockState(DoorLockReason reason, bool locked, params Door[] doors)
+public static void SetLockState(DoorLockReason reason, bool locked, params Door[] doors) => ((IEnumerable<Door>)doors).SetLockState(reason, locked);
 ```
 
 ### 🔹 `SetOpenState()`
-**Description:** Attempts to mass mutate the passage activation status across a collection of doors.
+**Description:** Sets open/closed state for all doors.
 ```csharp
-public static void SetOpenState(this IEnumerable<Door> doors, bool opened, bool bypassLocks = false)
+public static void SetOpenState(this IEnumerable<Door> doors, bool opened, bool bypassLocks = false) => doors.ForEach(d => d?.SetOpenState(opened, bypassLocks));
 ```
 
 ### 🔹 `SetOpenState()`
-**Description:** Attempts to mass mutate the passage activation status across an inline array of doors.
+**Description:** Sets open/closed state for all provided doors.
 ```csharp
-public static void SetOpenState(bool opened, bool bypassLocks, params Door[] doors)
+public static void SetOpenState(bool opened, bool bypassLocks, params Door[] doors) => ((IEnumerable<Door>)doors).SetOpenState(opened, bypassLocks);
 ```
 
 ### 🔹 `OpenAndLock()`
-**Description:** Forcibly unseals a collection of doors and applies a server-side lock state.
+**Description:** Opens all doors and applies a lock reason.
 ```csharp
-public static void OpenAndLock(this IEnumerable<Door> doors, DoorLockReason reason, bool playSound = true)
+public static void OpenAndLock(this IEnumerable<Door> doors, DoorLockReason reason, bool playSound = true) => doors.ForEach(d => d?.OpenAndLock(reason, playSound));
 ```
 
 ### 🔹 `OpenAndLock()`
-**Description:** Forcibly unseals an inline array of doors and applies a server-side lock state.
+**Description:** Opens all provided doors and applies a lock reason.
 ```csharp
-public static void OpenAndLock(DoorLockReason reason, bool playSound, params Door[] doors)
+public static void OpenAndLock(DoorLockReason reason, bool playSound, params Door[] doors) => ((IEnumerable<Door>)doors).OpenAndLock(reason, playSound);
+```
+
+### 🔹 `GetElevator()`
+**Description:** Returns the elevator associated with this door.
+```csharp
+public static Elevator GetElevator(this Door door)
 ```
 
 ### 🔹 `IsElevatorDoor()`
-**Description:** Performs hierarchical component reflection and token verification on the native GameObject metadata to isolate whether the asset behaves structurally as an elevator cabin bulkhead.
+**Description:** Returns true if the door is an elevator door.
 ```csharp
 public static bool IsElevatorDoor(this Door door)
 ```
 
+### 🔹 `IsElevatorAtDoorLevel()`
+**Description:** Returns true if the elevator cabin is aligned with the door's floor level.
+```csharp
+public static bool IsElevatorAtDoorLevel(this Door door)
+```
+
 ### 🔹 `CheckAndRestoreElevatorDoorState()`
-**Description:** Evaluates and corrects the open state of an elevator door after a lock release event. If the elevator is physically present at the deck and unlocked, the doors are automatically restored to their open state.
+**Description:** Restores elevator door state after lock removal.
 ```csharp
 public static void CheckAndRestoreElevatorDoorState(this Door door)
 ```
 
 ### 🔹 `IsGate()`
-**Description:** Scans the underlying engine transform string identifiers to evaluate if the targeted runtime door asset is classified as a heavy checkpoint airlock Gate structure.
+**Description:** Returns true if the door is a heavy gate.
 ```csharp
-public static bool IsGate(this Door door)
+public static bool IsGate(this Door door) => door is Gate;
 ```
 
 ---
@@ -301,21 +313,21 @@ public static void EnableEffect(this Player player, FacilityEffectType effect, b
 ```
 
 ### 🔹 `EnableEffect()`
-**Description:** Enables a specific status effect on a collection of players.
+**Description:** Enables a status effect for all players in the collection.
 ```csharp
-public static void EnableEffect(this IEnumerable<Player> players, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
+public static void EnableEffect(this IEnumerable<Player> players, FacilityEffectType effect, byte intensity = 1, float duration = 0f) => players.ForEach(p => p?.EnableEffect(effect, intensity, duration));
 ```
 
 ### 🔹 `EnableEffect()`
-**Description:** Enables a specific status effect on an inline array of players using default intensity and duration.
+**Description:** Enables a status effect for all provided players (default intensity and duration).
 ```csharp
-public static void EnableEffect(FacilityEffectType effect, params Player[] players) => EnableEffect(players, effect);
+public static void EnableEffect(FacilityEffectType effect, params Player[] players) => ((IEnumerable<Player>)players).EnableEffect(effect);
 ```
 
 ### 🔹 `EnableEffect()`
-**Description:** Enables a specific status effect on an inline array of players with custom intensity and duration.
+**Description:** Enables a status effect for all provided players with custom intensity and duration.
 ```csharp
-public static void EnableEffect(FacilityEffectType effect, byte intensity, float duration, params Player[] players)
+public static void EnableEffect(FacilityEffectType effect, byte intensity, float duration, params Player[] players) => ((IEnumerable<Player>)players).EnableEffect(effect, intensity, duration);
 ```
 
 ---
@@ -323,111 +335,39 @@ public static void EnableEffect(FacilityEffectType effect, byte intensity, float
 ## 📦 Class: ElevatorExtensions
 
 ### 🔹 `OpenActiveDoors()`
-**Description:** Fluently opens ONLY the elevator doors located on the currently active floor level, preventing cross-floor safety exploits.
+**Description:** Opens only the doors located on the elevator's current floor.
 ```csharp
 public static void OpenActiveDoors(this Elevator elevator, bool bypassLocks = false)
 ```
 
 ### 🔹 `CloseActiveDoors()`
-**Description:** Fluently closes ONLY the elevator doors located on the currently active floor level.
+**Description:** Closes only the doors located on the elevator's current floor.
 ```csharp
 public static void CloseActiveDoors(this Elevator elevator, bool bypassLocks = false)
 ```
 
 ### 🔹 `OpenActiveDoors()`
-**Description:** Opens active floor doors for a collection of elevators.
+**Description:** Opens active-floor doors for multiple elevators.
 ```csharp
-public static void OpenActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
+public static void OpenActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false) => elevators.ForEach(e => e?.OpenActiveDoors(bypassLocks));
 ```
 
 ### 🔹 `OpenActiveDoors()`
-**Description:** Opens active floor doors for an inline array of elevators.
+**Description:** Opens active-floor doors for multiple elevators (params overload).
 ```csharp
-public static void OpenActiveDoors(bool bypassLocks, params Elevator[] elevators)
+public static void OpenActiveDoors(bool bypassLocks, params Elevator[] elevators) => ((IEnumerable<Elevator>)elevators).OpenActiveDoors(bypassLocks);
 ```
 
 ### 🔹 `CloseActiveDoors()`
-**Description:** Closes active floor doors for a collection of elevators.
+**Description:** Closes active-floor doors for multiple elevators.
 ```csharp
-public static void CloseActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
+public static void CloseActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false) => elevators.ForEach(e => e?.CloseActiveDoors(bypassLocks));
 ```
 
 ### 🔹 `CloseActiveDoors()`
-**Description:** Closes active floor doors for an inline array of elevators.
+**Description:** Closes active-floor doors for multiple elevators (params overload).
 ```csharp
-public static void CloseActiveDoors(bool bypassLocks, params Elevator[] elevators)
-```
-
-### 🔹 `TurnOffLights()`
-**Description:** Turns off lights for a collection of elevators for the specified duration.
-```csharp
-public static void TurnOffLights(this IEnumerable<Elevator> elevators, float duration)
-```
-
-### 🔹 `TurnOffLights()`
-**Description:** Turns off lights for an inline array of elevators for the specified duration.
-```csharp
-public static void TurnOffLights(float duration, params Elevator[] elevators)
-```
-
-### 🔹 `TurnOnLights()`
-**Description:** Turns on lights for a collection of elevators.
-```csharp
-public static void TurnOnLights(this IEnumerable<Elevator> elevators)
-```
-
-### 🔹 `TurnOnLights()`
-**Description:** Turns on lights for an inline array of elevators.
-```csharp
-public static void TurnOnLights(params Elevator[] elevators)
-```
-
-### 🔹 `GetElevator()`
-**Description:** Resolves the high-level <see cref="Elevator"/> wrapper associated with this specific door instance. Supports both wrapper casting and direct native component resolution fallbacks.
-```csharp
-public static Elevator GetElevator(this Door door) // TODO: SHOULD BE IN DoorExtensions
-```
-
-### 🔹 `GetElevators()`
-**Description:** Gets all active elevators associated with the specified facility zone destination.
-```csharp
-public static IEnumerable<Elevator> GetElevators(this FacilityZone zone) // TODO: SHOULD BE IN FacilityZoneExtensions
-```
-
-### 🔹 `GetElevatorsInZone()`
-**Description:** Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
-```csharp
-public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zone.GetElevators(); // TODO: SHOULD BE IN FacilityZoneExtensions /// <summary> /// Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room. /// </summary> /// <param name="room">The anchoring <see cref="Room"/> instance tracking local destination mappings.</param> /// <returns>An enumerable sequence tracking matching elevator units linked directly to the specified layout node mapping.</returns> public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room) // TODO: SHOULD BE IN RoomExtensions { if (room is null) yield break;
-```
-
-### 🔹 `IsElevatorAtDoorLevel()`
-**Description:** Verifies whether the associated elevator cabin is currently physically aligned with this specific door's vertical deck level. Used comprehensively across door interaction layers to prevent void access exploits.
-```csharp
-public static bool IsElevatorAtDoorLevel(this Door door) // TODO: SHOULD BE IN DoorExtensions
-```
-
-### 🔹 `IsActiveInRoom()`
-**Description:** Evaluates whether any elevator infrastructure bound to the specified room is actively executing a mechanical movement sequence.
-```csharp
-public static bool IsActiveInRoom(this Room room) // TODO: SHOULD BE IN RoomExtensions
-```
-
-### 🔹 `IsInExecutiveElevator()`
-**Description:** Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
-```csharp
-public static bool IsInExecutiveElevator(this Player player) // TODO: SHOULD BE IN PlayerExtensions
-```
-
-### 🔹 `LockElevators()`
-**Description:** Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
-```csharp
-public static void LockElevators(this FacilityZone zone) // TODO: SHOULD BE IN FacilityZoneExtensions
-```
-
-### 🔹 `LockElevatorsInZone()`
-**Description:** Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone. Retained for backward compatibility.
-```csharp
-public static void LockElevatorsInZone(FacilityZone zone) => zone.LockElevators(); // TODO: SHOULD BE IN FacilityZoneExtensions /// <summary> /// Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone. /// </summary> /// <param name="zone">The targeting structural <see cref="FacilityZone"/> layout block assigned for operational recovery routines.</param> public static void UnlockElevators(this FacilityZone zone) { foreach (var elevator in zone.GetElevators()) elevator.UnlockAllDoors(); // TODO: SHOULD BE IN FacilityZoneExtensions } /// <summary> /// Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone. /// Retained for backward compatibility. /// </summary> public static void UnlockElevatorsInZone(FacilityZone zone) => zone.UnlockElevators(); // TODO: SHOULD BE IN FacilityZoneExtensions /// <summary> /// Processes a localized, probability-driven evaluation sweep across all elevators bound to a room, /// safely routing matching units into an execution action graph. /// </summary> /// <param name="room">The source <see cref="Room"/> context serving as the spatial matrix anchor for local connections.</param> /// <param name="affectChance">The fractional probability value constraint ceiling checked via thread-safe random state generators.</param> /// <param name="duration">The execution lifecycle tracking timeframe in seconds allocated for downstream manipulation routines.</param> /// <param name="elevatorAction">The specialized modification action callback graph deployed if probability check criteria are successfully met.</param> public static void HandleElevatorsForRoom(this Room room, float affectChance, float duration, Action<Elevator> elevatorAction) // TODO: SHOULD BE IN RoomExtensions { if (affectChance <= 0f || affectChance > 100f || elevatorAction == null) return;
+public static void CloseActiveDoors(bool bypassLocks, params Elevator[] elevators) => ((IEnumerable<Elevator>)elevators).CloseActiveDoors(bypassLocks);
 ```
 
 ---
@@ -435,51 +375,51 @@ public static void LockElevatorsInZone(FacilityZone zone) => zone.LockElevators(
 ## 📦 Class: ElevatorLightingExtensions
 
 ### 🔹 `TurnOffLights()`
-**Description:** Delays or suppresses elevator cabin lighting for a specified duration.
+**Description:** Turns off lights in the elevator cabin for the given duration.
 ```csharp
 public static void TurnOffLights(this Elevator elevator, float duration)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Restores elevator cabin lighting.
+**Description:** Turns on lights in the elevator cabin.
 ```csharp
 public static void TurnOnLights(this Elevator elevator)
 ```
 
+### 🔹 `AreLightsOff()`
+**Description:** Returns true if the elevator cabin lights are currently disabled.
+```csharp
+public static bool AreLightsOff(this Elevator elevator)
+```
+
 ### 🔹 `FlickerElevatorLightsCoroutine()`
-**Description:** Runs a visual flicker animation loop for the elevator lighting.
+**Description:** Runs a flicker animation coroutine for elevator lighting.
 ```csharp
 public static IEnumerator<float> FlickerElevatorLightsCoroutine(this Elevator elevator, float duration, float frequency)
 ```
 
-### 🔹 `AreLightsOff()`
-**Description:** Checks if the elevator lights are currently disabled.
-```csharp
-public static bool AreLightsOff(this Elevator elevator) => false;
-```
-
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights for a collection of elevators for the specified duration.
+**Description:** Turns off lights for multiple elevators.
 ```csharp
 public static void TurnOffLights(this IEnumerable<Elevator> elevators, float duration)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights for an inline array of elevators for the specified duration.
+**Description:** Turns off lights for multiple elevators (params overload).
 ```csharp
-public static void TurnOffLights(float duration, params Elevator[] elevators)
+public static void TurnOffLights(float duration, params Elevator[] elevators) => ((IEnumerable<Elevator>)elevators).TurnOffLights(duration);
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights for a collection of elevators.
+**Description:** Turns on lights for multiple elevators.
 ```csharp
 public static void TurnOnLights(this IEnumerable<Elevator> elevators)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights for an inline array of elevators.
+**Description:** Turns on lights for multiple elevators (params overload).
 ```csharp
-public static void TurnOnLights(params Elevator[] elevators)
+public static void TurnOnLights(params Elevator[] elevators) => ((IEnumerable<Elevator>)elevators).TurnOnLights();
 ```
 
 ---
@@ -487,19 +427,19 @@ public static void TurnOnLights(params Elevator[] elevators)
 ## 📦 Class: EnumExtensions
 
 ### 🔹 `ToAudioKey()`
-**Description:** Automatically transforms an execution enum field token into a standardized lowercase string key identifier. Eliminates redundant switch-case evaluation structures across independent sub-system audio pipeline configurations.
+**Description:** Returns the enum value as a lowercase string.
 ```csharp
-public static string ToAudioKey(this Enum value)
+public static string ToAudioKey(this Enum value) => value?.ToString().ToLowerInvariant() ?? string.Empty;
 ```
 
 ### 🔹 `ParseOrDefault()`
-**Description:** Defensively converts a raw string literal target into its verified strongly-typed structural enum representation. Safely insulates execution pipelines against human typographical initialization anomalies located within deployment configuration matrices. <typeparam name="T">The concrete structural value constraint matching a standard system <see cref="Enum"/> layout topology.</typeparam>
+**Description:** Parses the string into an enum value or returns the fallback.
 ```csharp
 public static T ParseOrDefault<T>(this string value, T defaultValue = default, bool ignoreCase = true) where T : struct, Enum
 ```
 
 ### 🔹 `GetRandomValue()`
-**Description:** Aggregates enumeration boundaries and retrieves a structurally random field token from the targeted enum reflection array space. Seamlessly targets the thread-isolated, safe data abstraction framework to guarantee performance scaling. <typeparam name="T">The targeting assembly constraint layout matching a core active system enumeration signature.</typeparam>
+**Description:** Returns a random value from the enum.
 ```csharp
 public static T GetRandomValue<T>() where T : struct, Enum
 ```
@@ -509,33 +449,33 @@ public static T GetRandomValue<T>() where T : struct, Enum
 ## 📦 Class: FirearmExtensions
 
 ### 🔹 `HasAttachment()`
-**Description:** Checks if the firearm has the specified attachment enabled.
+**Description:** Returns true if the firearm has the specified attachment enabled.
 ```csharp
 public static bool HasAttachment(this FirearmItem firearm, AttachmentName attachmentName)
 ```
 
 ### 🔹 `HasAttachments()`
-**Description:** Checks if the firearm has all specified attachments enabled.
+**Description:** Returns true if the firearm has all specified attachments enabled.
 ```csharp
 public static bool HasAttachments(this FirearmItem firearm, IEnumerable<AttachmentName> attachmentNames)
 ```
 
 ### 🔹 `HasAttachments()`
-**Description:** Checks if the firearm has all inline array attachments enabled.
+**Description:** Returns true if the firearm has all specified attachments enabled (params overload).
 ```csharp
-public static bool HasAttachments(this FirearmItem firearm, params AttachmentName[] attachmentNames)
+public static bool HasAttachments(this FirearmItem firearm, params AttachmentName[] attachmentNames) => firearm.HasAttachments((IEnumerable<AttachmentName>)attachmentNames);
 ```
 
 ### 🔹 `HasAttachment()`
-**Description:** Checks if all firearms in the collection have the specified attachment enabled.
+**Description:** Returns true if all firearms in the collection have the specified attachment enabled.
 ```csharp
 public static bool HasAttachment(this IEnumerable<FirearmItem> firearms, AttachmentName attachmentName)
 ```
 
 ### 🔹 `HasAttachment()`
-**Description:** Checks if all inline array firearms have the specified attachment enabled.
+**Description:** Returns true if all firearms in the params array have the specified attachment enabled.
 ```csharp
-public static bool HasAttachment(AttachmentName attachmentName, params FirearmItem[] firearms)
+public static bool HasAttachment(AttachmentName attachmentName, params FirearmItem[] firearms) => ((IEnumerable<FirearmItem>)firearms).HasAttachment(attachmentName);
 ```
 
 ---
@@ -543,15 +483,27 @@ public static bool HasAttachment(AttachmentName attachmentName, params FirearmIt
 ## 📦 Class: HandlerExtensions
 
 ### 🔹 `RegisterAll()`
-**Description:** Systematically registers an aggregated inline array sequence of event handlers onto the central framework routing engine.
+**Description:** Registers multiple event handlers.
 ```csharp
-public static void RegisterAll(params CustomEventsHandler[] handlers) // TODO: IEnumerable + overload
+public static void RegisterAll(this IEnumerable<CustomEventsHandler> handlers) => handlers.ForEach(h => CustomHandlersManager.RegisterEventsHandler(h));
+```
+
+### 🔹 `RegisterAll()`
+**Description:** Registers multiple event handlers (params overload).
+```csharp
+public static void RegisterAll(params CustomEventsHandler[] handlers) => ((IEnumerable<CustomEventsHandler>)handlers).RegisterAll();
 ```
 
 ### 🔹 `UnregisterAll()`
-**Description:** Systematically evicts and unregisters an aggregated inline array sequence of event handlers from the central framework routing engine.
+**Description:** Unregisters multiple event handlers.
 ```csharp
-public static void UnregisterAll(params CustomEventsHandler[] handlers) // TODO: IEnumerable + overload
+public static void UnregisterAll(this IEnumerable<CustomEventsHandler> handlers) => handlers.ForEach(h => CustomHandlersManager.UnregisterEventsHandler(h));
+```
+
+### 🔹 `UnregisterAll()`
+**Description:** Unregisters multiple event handlers (params overload).
+```csharp
+public static void UnregisterAll(params CustomEventsHandler[] handlers) => ((IEnumerable<CustomEventsHandler>)handlers).UnregisterAll();
 ```
 
 ---
@@ -559,15 +511,15 @@ public static void UnregisterAll(params CustomEventsHandler[] handlers) // TODO:
 ## 📦 Class: IoExtensions
 
 ### 🔹 `IsReparsePoint()`
-**Description:** Evaluates defensively whether the targeted path configuration behaves structurally as an OS reparse point (Virtual Junction, Symlink, or Hardlink partition).
+**Description:** Returns true if the path exists and is a reparse point (symlink, junction, etc.).
 ```csharp
 public static bool IsReparsePoint(this string path)
 ```
 
 ### 🔹 `CopyFilesTo()`
-**Description:** Iterates over the source directory to discover and mirror file assets into a destination folder boundary utilizing a concrete structural search query pattern filter.
+**Description:** Copies files from one directory to another using a search pattern. Creates the destination directory if needed.
 ```csharp
-public static void CopyFilesTo(this string sourceDirectory, string destinationDirectory, string searchPattern = "*.*", bool overwrite = true)
+public static void CopyFilesTo( this string sourceDirectory, string destinationDirectory, string searchPattern = "*.*", bool overwrite = true)
 ```
 
 ---
@@ -575,25 +527,25 @@ public static void CopyFilesTo(this string sourceDirectory, string destinationDi
 ## 📦 Class: MapExtensions
 
 ### 🔹 `BreakAllFacilityDoors()`
-**Description:** Performs a comprehensive, high-performance iteration sweep across all active rooms to forcibly shatter and destroy every structural <see cref="BreakableDoor"/> instance that is not currently broken.
+**Description:** Breaks all breakable doors in the entire facility.
 ```csharp
-public static void BreakAllFacilityDoors()
+public static void BreakAllFacilityDoors() => Room.List?.ForEach(r => r?.BreakAllDoors());
 ```
 
 ### 🔹 `SetAllLightsEnabled()`
-**Description:** Global shortcut matrix to instantly toggle the active illumination status field of every light controller component deployed across the entire facility map topology.
+**Description:** Enables or disables all lights in the facility.
 ```csharp
-public static void SetAllLightsEnabled(bool enabled)
+public static void SetAllLightsEnabled(bool enabled) => Room.List?.ForEach(room => room?.AllLightControllers?.ForEach(c => c.LightsEnabled = enabled));
 ```
 
 ### 🔹 `GetEngagedGeneratorsCount()`
-**Description:** Computes the exact real-time operational volume load metrics of facility power generators currently sitting in a fully engaged state.
+**Description:** Returns the number of engaged generators.
 ```csharp
 public static int GetEngagedGeneratorsCount()
 ```
 
 ### 🔹 `AreAllGeneratorsEngaged()`
-**Description:** Evaluates with zero heap allocations whether all currently deployed power generator sub-units are fully engaged, verifying metrics against a minimum structural compliance count.
+**Description:** Returns true if all generators are engaged and the count meets the required minimum.
 ```csharp
 public static bool AreAllGeneratorsEngaged(int minimumRequiredCount = 3)
 ```
@@ -603,169 +555,169 @@ public static bool AreAllGeneratorsEngaged(int minimumRequiredCount = 3)
 ## 📦 Class: MathExtensions
 
 ### 🔹 `Clamp()`
-**Description:** Clamps a float value between a minimum and maximum range.
+**Description:** Clamps the value between the given minimum and maximum.
 ```csharp
 public static float Clamp(this float value, float min, float max) => Mathf.Clamp(value, min, max);
 ```
 
 ### 🔹 `Clamp()`
-**Description:** Clamps an int value between a minimum and maximum range.
+**Description:** Clamps the value between the given minimum and maximum.
 ```csharp
 public static int Clamp(this int value, int min, int max) => Mathf.Clamp(value, min, max);
 ```
 
 ### 🔹 `Clamp()`
-**Description:** Clamps a double value between a minimum and maximum range.
+**Description:** Clamps the value between the given minimum and maximum.
 ```csharp
 public static double Clamp(this double value, double min, double max) => value < min ? min : (value > max ? max : value);
 ```
 
 ### 🔹 `LimitMin()`
-**Description:** Ensures a float value does not fall below the specified minimum baseline.
+**Description:** Ensures the value is not lower than the given minimum.
 ```csharp
 public static float LimitMin(this float value, float minBaseline) => Mathf.Max(minBaseline, value);
 ```
 
 ### 🔹 `LimitMin()`
-**Description:** Ensures an int value does not fall below the specified minimum baseline.
+**Description:** Ensures the value is not lower than the given minimum.
 ```csharp
 public static int LimitMin(this int value, int minBaseline) => Mathf.Max(minBaseline, value);
 ```
 
 ### 🔹 `LimitMin()`
-**Description:** Ensures a double value does not fall below the specified minimum baseline.
+**Description:** Ensures the value is not lower than the given minimum.
 ```csharp
 public static double LimitMin(this double value, double minBaseline) => value < minBaseline ? minBaseline : value;
 ```
 
 ### 🔹 `LimitMax()`
-**Description:** Ensures a float value does not exceed the specified maximum baseline.
+**Description:** Ensures the value is not higher than the given maximum.
 ```csharp
 public static float LimitMax(this float value, float maxBaseline) => Mathf.Min(maxBaseline, value);
 ```
 
 ### 🔹 `LimitMax()`
-**Description:** Ensures an int value does not exceed the specified maximum baseline.
+**Description:** Ensures the value is not higher than the given maximum.
 ```csharp
 public static int LimitMax(this int value, int maxBaseline) => Mathf.Min(maxBaseline, value);
 ```
 
 ### 🔹 `LimitMax()`
-**Description:** Ensures a double value does not exceed the specified maximum baseline.
+**Description:** Ensures the value is not higher than the given maximum.
 ```csharp
 public static double LimitMax(this double value, double maxBaseline) => value > maxBaseline ? maxBaseline : value;
 ```
 
 ### 🔹 `Abs()`
-**Description:** Returns the absolute value of an int.
+**Description:** Returns the absolute value.
 ```csharp
 public static int Abs(this int value) => Math.Abs(value);
 ```
 
 ### 🔹 `Abs()`
-**Description:** Returns the absolute value of a float.
+**Description:** Returns the absolute value.
 ```csharp
 public static float Abs(this float value) => Mathf.Abs(value);
 ```
 
 ### 🔹 `Abs()`
-**Description:** Returns the absolute value of a double.
+**Description:** Returns the absolute value.
 ```csharp
 public static double Abs(this double value) => Math.Abs(value);
 ```
 
 ### 🔹 `Sign()`
-**Description:** Returns the sign of an int value (-1, 0, or 1).
+**Description:** Returns -1, 0 or 1 depending on the value.
 ```csharp
 public static int Sign(this int value) => value == 0 ? 0 : (value > 0 ? 1 : -1);
 ```
 
 ### 🔹 `Sign()`
-**Description:** Returns the sign of a float value (-1.0, 0.0, or 1.0).
+**Description:** Returns -1, 0 or 1 depending on the value.
 ```csharp
 public static float Sign(this float value) => value == 0f ? 0f : (value > 0f ? 1f : -1f);
 ```
 
 ### 🔹 `Sign()`
-**Description:** Returns the sign of a double value (-1.0, 0.0, or 1.0).
+**Description:** Returns -1, 0 or 1 depending on the value.
 ```csharp
 public static double Sign(this double value) => value == 0.0 ? 0.0 : (value > 0.0 ? 1.0 : -1.0);
 ```
 
 ### 🔹 `Lerp()`
-**Description:** Linearly interpolates between two float values based on the specified alpha.
+**Description:** Linearly interpolates between two values.
 ```csharp
 public static float Lerp(this float from, float to, float t) => Mathf.Lerp(from, to, t);
 ```
 
 ### 🔹 `LerpUnclamped()`
-**Description:** Linearly interpolates between two float values, allowing out-of-bounds alpha values.
+**Description:** Linearly interpolates without clamping the alpha.
 ```csharp
 public static float LerpUnclamped(this float from, float to, float t) => Mathf.LerpUnclamped(from, to, t);
 ```
 
 ### 🔹 `Floor()`
-**Description:** Returns the largest integer smaller than or equal to the float value.
+**Description:** Floors the value.
 ```csharp
 public static float Floor(this float value) => Mathf.Floor(value);
 ```
 
 ### 🔹 `Floor()`
-**Description:** Returns the largest integer smaller than or equal to the double value.
+**Description:** Floors the value.
 ```csharp
 public static double Floor(this double value) => Math.Floor(value);
 ```
 
 ### 🔹 `Ceil()`
-**Description:** Returns the smallest integer greater than or equal to the float value.
+**Description:** Ceils the value.
 ```csharp
 public static float Ceil(this float value) => Mathf.Ceil(value);
 ```
 
 ### 🔹 `Ceil()`
-**Description:** Returns the smallest integer greater than or equal to the double value.
+**Description:** Ceils the value.
 ```csharp
 public static double Ceil(this double value) => Math.Ceiling(value);
 ```
 
 ### 🔹 `DbToLinear()`
-**Description:** Converts a decibel amplitude value (-96dB to 0dB) to a linear coefficient scale (0.0 to 1.0).
+**Description:** Converts decibels to a linear 0–1 value.
 ```csharp
 public static float DbToLinear(this float db) => db <= -96f ? 0f : Mathf.Pow(10f, db / 20f);
 ```
 
 ### 🔹 `LinearToDb()`
-**Description:** Converts a linear coefficient scalar (0.0 to 1.0) to a logarithmic decibel scale.
+**Description:** Converts a linear 0–1 value to decibels.
 ```csharp
 public static float LinearToDb(this float linear) => linear <= 0.00001f ? -96f : 20f * Mathf.Log10(linear);
 ```
 
 ### 🔹 `IsNanOrInfinity()`
-**Description:** Checks if a float value is NaN or Infinity.
+**Description:** Returns true if the value is NaN or Infinity.
 ```csharp
 public static bool IsNanOrInfinity(this float value) => float.IsNaN(value) || float.IsInfinity(value);
 ```
 
 ### 🔹 `IsNanOrInfinity()`
-**Description:** Checks if a double value is NaN or Infinity.
+**Description:** Returns true if the value is NaN or Infinity.
 ```csharp
 public static bool IsNanOrInfinity(this double value) => double.IsNaN(value) || double.IsInfinity(value);
 ```
 
 ### 🔹 `IsNanOrInfinity()`
-**Description:** Always returns false, as integral types cannot represent NaN or Infinity.
+**Description:** Always false for integers.
 ```csharp
 public static bool IsNanOrInfinity(this int value) => false;
 ```
 
 ### 🔹 `RoundToInt()`
-**Description:** Rounds a float value to the nearest integer.
+**Description:** Rounds the value to the nearest integer.
 ```csharp
 public static int RoundToInt(this float value) => Mathf.RoundToInt(value);
 ```
 
 ### 🔹 `RoundToInt()`
-**Description:** Rounds a double value to the nearest integer.
+**Description:** Rounds the value to the nearest integer.
 ```csharp
 public static int RoundToInt(this double value) => (int)Math.Round(value);
 ```
@@ -775,21 +727,21 @@ public static int RoundToInt(this double value) => (int)Math.Round(value);
 ## 📦 Class: PickupExtensions
 
 ### 🔹 `ApplyKineticBlast()`
-**Description:** Forcibly applies kinetic physical propulsion forces onto a single world-space pickup asset. Single Point of Truth for individual pickup physics manipulation.
+**Description:** Applies a physics impulse to a pickup.
 ```csharp
 public static void ApplyKineticBlast(this Pickup pickup, float linearVelocityMagnitude, float angularVelocityMagnitude)
 ```
 
 ### 🔹 `ApplyKineticBlast()`
-**Description:** Iterates over an aggregated collection layout of spawned pickups and forcibly applies batch kinetic physical propulsion forces. Seamlessly delegates item execution to maintain absolute single responsibility and zero duplication.
+**Description:** Applies a physics impulse to multiple pickups.
 ```csharp
-public static void ApplyKineticBlast(this IEnumerable<Pickup> pickups, float linearVelocityMagnitude, float angularVelocityMagnitude)
+public static void ApplyKineticBlast(this IEnumerable<Pickup> pickups, float linearVelocityMagnitude, float angularVelocityMagnitude) => pickups.ForEach(p => p?.ApplyKineticBlast(linearVelocityMagnitude, angularVelocityMagnitude));
 ```
 
 ### 🔹 `ApplyKineticBlast()`
-**Description:** Iterates over an inline array of spawned pickups and forcibly applies batch kinetic physical propulsion forces.
+**Description:** Applies a physics impulse to multiple pickups (params overload).
 ```csharp
-public static void ApplyKineticBlast(float linearVelocityMagnitude, float angularVelocityMagnitude, params Pickup[] pickups)
+public static void ApplyKineticBlast(float linearVelocityMagnitude, float angularVelocityMagnitude, params Pickup[] pickups) => ((IEnumerable<Pickup>)pickups).ApplyKineticBlast(linearVelocityMagnitude, angularVelocityMagnitude);
 ```
 
 ---
@@ -797,213 +749,219 @@ public static void ApplyKineticBlast(float linearVelocityMagnitude, float angula
 ## 📦 Class: PlayerExtensions
 
 ### 🔹 `AttachTrackingObject()`
-**Description:** Attaches a tracking GameObject to a single player using a transform tracker component.
+**Description:** Attaches a follower object to the player. The follower tracks the player's transform with an optional offset.
 ```csharp
 public static void AttachTrackingObject(this Player player, GameObject followerObject, Vector3 offset = default)
 ```
 
 ### 🔹 `AttachTrackingObject()`
-**Description:** Attaches a tracking GameObject to a collection of players.
+**Description:** Attaches a follower object to multiple players.
 ```csharp
-public static void AttachTrackingObject(this IEnumerable<Player> players, GameObject followerObject, Vector3 offset = default)
+public static void AttachTrackingObject(this IEnumerable<Player> players, GameObject followerObject, Vector3 offset = default) => players?.ForEach(p => p?.AttachTrackingObject(followerObject, offset));
 ```
 
 ### 🔹 `AttachTrackingObject()`
-**Description:** Attaches a tracking GameObject to an inline array of players.
+**Description:** Attaches a follower object to multiple players (params overload).
 ```csharp
-public static void AttachTrackingObject(GameObject followerObject, Vector3 offset, params Player[] players)
+public static void AttachTrackingObject(GameObject followerObject, Vector3 offset, params Player[] players) => ((IEnumerable<Player>)players).AttachTrackingObject(followerObject, offset);
 ```
 
 ### 🔹 `BroadcastHintToAll()`
-**Description:** Sends a hint message to all fully initialized and ready players globally.
+**Description:** Sends a hint to all ready players.
 ```csharp
 public static void BroadcastHintToAll(string hintContent, float duration = 5f)
 ```
 
 ### 🔹 `BroadcastHint()`
-**Description:** Sends a hint message to a collection of players, filtering out null or unready entities.
+**Description:** Sends a hint to multiple players. Only ready players receive the hint.
 ```csharp
-public static void BroadcastHint(this IEnumerable<Player> players, string hintContent, float duration = 5f)
+public static void BroadcastHint(this IEnumerable<Player> players, string hintContent, float duration = 5f) => players?.ForEach(p => { if (p?.IsReady == true) p.SendHint(hintContent, duration);
 ```
 
 ### 🔹 `BroadcastHint()`
-**Description:** Sends a hint message to an inline array of players, filtering out null or unready entities.
+**Description:** Sends a hint to multiple players (params overload).
 ```csharp
-public static void BroadcastHint(string hintContent, float duration, params Player[] players)
+public static void BroadcastHint(string hintContent, float duration, params Player[] players) => ((IEnumerable<Player>)players).BroadcastHint(hintContent, duration);
 ```
 
 ### 🔹 `GetHumeShieldValue()`
-**Description:** Gets the current Hume Shield value of a player, returning 0 if the stat module is missing.
+**Description:** Returns the player's current Hume Shield value. Returns 0 if the stat module is missing.
 ```csharp
 public static float GetHumeShieldValue(this Player player)
 ```
 
 ### 🔹 `IsLivingHuman()`
-**Description:** Determines if the player is an active, ready, and living human faction member.
+**Description:** Returns true if the player is ready, alive and belongs to a human faction.
 ```csharp
 public static bool IsLivingHuman(this Player player)
 ```
 
-### 🔹 `GetDistanceTo()`
-**Description:** Calculates the Euclidean distance between a player and a specified position vector.
+### 🔹 `HasActiveLightSource()`
+**Description:** Returns true if the player's held item emits light (flashlight or light item).
 ```csharp
-public static float GetDistanceTo(this Player player, Vector3 position)
-```
-
-### 🔹 `IsWithinDistance()`
-**Description:** Checks if a player is within a maximum distance threshold from a position vector.
-```csharp
-public static bool IsWithinDistance(this Player player, Vector3 position, float maxDistance)
+public static bool HasActiveLightSource(this Player player)
 ```
 
 ### 🔹 `GetHeldLightSourceState()`
-**Description:** Checks if the player's currently held light source item or weapon flashlight attachment is active.
+**Description:** Returns true if the player's held light source is currently emitting.
 ```csharp
 public static bool GetHeldLightSourceState(this Player player)
 ```
 
 ### 🔹 `SetHeldLightSourceState()`
-**Description:** Toggles the activation state of the player's held light source item or weapon flashlight attachment.
+**Description:** Sets the emission state of the player's held light source.
 ```csharp
 public static void SetHeldLightSourceState(this Player player, bool emit)
 ```
 
 ### 🔹 `SetHeldLightSourceState()`
-**Description:** Toggles the activation state of a collection of players' held light sources.
+**Description:** Sets the emission state of held light sources for multiple players.
 ```csharp
-public static void SetHeldLightSourceState(this IEnumerable<Player> players, bool emit)
+public static void SetHeldLightSourceState(this IEnumerable<Player> players, bool emit) => players?.ForEach(p => p?.SetHeldLightSourceState(emit));
 ```
 
 ### 🔹 `SetHeldLightSourceState()`
-**Description:** Toggles the activation state of an inline array of players' held light sources.
+**Description:** Sets the emission state of held light sources (params overload).
 ```csharp
-public static void SetHeldLightSourceState(bool emit, params Player[] players)
+public static void SetHeldLightSourceState(bool emit, params Player[] players) => ((IEnumerable<Player>)players).SetHeldLightSourceState(emit);
 ```
 
-### 🔹 `FlickerHeldLightSourceCoroutine()`
-**Description:** Runs a coroutine loop that flickers the player's held light source.
+### 🔹 `GetDistanceTo()`
+**Description:** Returns the distance between the player and a world position.
 ```csharp
-public static IEnumerator<float> FlickerHeldLightSourceCoroutine(this Player player, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
+public static float GetDistanceTo(this Player player, Vector3 position)
 ```
 
-### 🔹 `FlickerHeldLightSource()`
-**Description:** Triggers the flicker coroutine loop for a collection of players.
+### 🔹 `IsWithinDistance()`
+**Description:** Returns true if the player is within the given distance from a world position. Uses squared magnitude for performance.
 ```csharp
-public static void FlickerHeldLightSource(this IEnumerable<Player> players, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
-```
-
-### 🔹 `FlickerHeldLightSource()`
-**Description:** Triggers the flicker coroutine loop for an inline array of players.
-```csharp
-public static void FlickerHeldLightSource(int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players)
-```
-
-### 🔹 `HasActiveLightSource()`
-**Description:** Verifies if the player is actively emitting light via flashlights or firearm attachments.
-```csharp
-public static bool HasActiveLightSource(this Player player)
-```
-
-### 🔹 `IsInRoom()`
-**Description:** Checks if the player is in any of the specified rooms using a zero-allocation evaluation loop.
-```csharp
-public static bool IsInRoom(this Player player, params RoomName[] roomNames)
-```
-
-### 🔹 `IsInTrueDarkness()`
-**Description:** Verifies if the player is in total darkness, accounting for both standard facility rooms and elevator cabins.
-```csharp
-public static bool IsInTrueDarkness(this Player player)
-```
-
-### 🔹 `IsInDarkRoom()`
-**Description:** Checks if the standard room lighting controllers are disabled in the player's current location.
-```csharp
-public static bool IsInDarkRoom(this Player player)
+public static bool IsWithinDistance(this Player player, Vector3 position, float maxDistance)
 ```
 
 ### 🔹 `IsWithinRadius()`
-**Description:** Validates circular proximity to a target vector using square magnitude to avoid performance overhead.
+**Description:** Returns true if the player is within the given radius from a world position. Uses squared magnitude for performance.
 ```csharp
 public static bool IsWithinRadius(this Player player, Vector3 targetPosition, float radiusSize)
 ```
 
+### 🔹 `IsWithinRadius()`
+**Description:** Returns true if the player is within the given radius from the room center.
+```csharp
+public static bool IsWithinRadius(this Player player, Room room, float radiusSize)
+```
+
 ### 🔹 `IsWithinAnyRadius()`
-**Description:** Checks if the player falls within a radius threshold of any provided target positions.
+**Description:** Returns true if the player is within the given radius of any provided positions. Uses squared magnitude for performance.
 ```csharp
 public static bool IsWithinAnyRadius(this Player player, IEnumerable<Vector3> positions, float radiusSize)
 ```
 
-### 🔹 `WhereAlive()`
-**Description:** Filters a player collection to return only ready and living instances.
+### 🔹 `IsInRoom()`
+**Description:** Returns true if the player is currently inside any of the given rooms.
 ```csharp
-public static IEnumerable<Player> WhereAlive(this IEnumerable<Player> players)
+public static bool IsInRoom(this Player player, params RoomName[] roomNames)
 ```
 
-### 🔹 `WhereHuman()`
-**Description:** Filters a player collection to return only human faction members.
+### 🔹 `IsInDarkRoom()`
+**Description:** Returns true if the player is in a room with lights turned off.
 ```csharp
-public static IEnumerable<Player> WhereHuman(this IEnumerable<Player> players)
+public static bool IsInDarkRoom(this Player player)
 ```
 
-### 🔹 `WhereNotInPocket()`
-**Description:** Filters a player collection to return players who are not in the Pocket Dimension.
+### 🔹 `IsInTrueDarkness()`
+**Description:** Returns true if the player is in total darkness (dark room or dark elevator cabin).
 ```csharp
-public static IEnumerable<Player> WhereNotInPocket(this IEnumerable<Player> players)
-```
-
-### 🔹 `ApplySensoryShock()`
-**Description:** Applies a combination of visual and auditory status impairments to a single player.
-```csharp
-public static void ApplySensoryShock(this Player player, float flashDuration = 0.0f, float blindDuration = 0.0f, float blurDuration = 0.0f, float deafenDuration = 0.0f)
-```
-
-### 🔹 `ApplySensoryShock()`
-**Description:** Applies a combination of visual and auditory status impairments to a collection of players.
-```csharp
-public static void ApplySensoryShock(this IEnumerable<Player> players, float flashDuration = 0.0f, float blindDuration = 0.0f, float blurDuration = 0.0f, float deafenDuration = 0.0f)
-```
-
-### 🔹 `ApplySensoryShock()`
-**Description:** Applies a combination of visual and auditory status impairments to an inline array of players.
-```csharp
-public static void ApplySensoryShock(float flashDuration, float blindDuration, float blurDuration, float deafenDuration, params Player[] players)
+public static bool IsInTrueDarkness(this Player player)
 ```
 
 ### 🔹 `GetRoom()`
-**Description:** Resolves the facility room matching the player's current spatial coordinates.
+**Description:** Returns the room the player is currently standing in.
 ```csharp
 public static Room GetRoom(this Player player)
 ```
 
 ### 🔹 `GetDistanceTo()`
-**Description:** Calculates the distance between a player and a room center anchor.
+**Description:** Returns the distance between the player and the room center.
 ```csharp
 public static float GetDistanceTo(this Player player, Room room)
 ```
 
-### 🔹 `IsWithinRadius()`
-**Description:** Checks if the player is within a radius of the targeted room center.
+### 🔹 `ApplySensoryShock()`
+**Description:** Applies visual and auditory impairments to the player.
 ```csharp
-public static bool IsWithinRadius(this Player player, Room room, float radiusSize)
+public static void ApplySensoryShock( this Player player, float flashDuration = 0f, float blindDuration = 0f, float blurDuration = 0f, float deafenDuration = 0f)
+```
+
+### 🔹 `ApplySensoryShock()`
+**Description:** Applies sensory shock to multiple players.
+```csharp
+public static void ApplySensoryShock( this IEnumerable<Player> players, float flashDuration = 0f, float blindDuration = 0f, float blurDuration = 0f, float deafenDuration = 0f) => players?.ForEach(p => p?.ApplySensoryShock(flashDuration, blindDuration, blurDuration, deafenDuration));
+```
+
+### 🔹 `ApplySensoryShock()`
+**Description:** Applies sensory shock to multiple players (params overload).
+```csharp
+public static void ApplySensoryShock( float flashDuration, float blindDuration, float blurDuration, float deafenDuration, params Player[] players) => ((IEnumerable<Player>)players).ApplySensoryShock(flashDuration, blindDuration, blurDuration, deafenDuration);
+```
+
+### 🔹 `FlickerHeldLightSourceCoroutine()`
+**Description:** Coroutine that flickers the player's held light source.
+```csharp
+public static IEnumerator<float> FlickerHeldLightSourceCoroutine( this Player player, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
+```
+
+### 🔹 `FlickerHeldLightSource()`
+**Description:** Starts the flicker coroutine for multiple players.
+```csharp
+public static void FlickerHeldLightSource( this IEnumerable<Player> players, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null) => players?.ForEach(p => { if (p != null) Timing.RunCoroutine(p.FlickerHeldLightSourceCoroutine(flickerCount, delayPerFlicker, forceOff, onTickFeedback));
+```
+
+### 🔹 `FlickerHeldLightSource()`
+**Description:** Starts the flicker coroutine for multiple players (params overload).
+```csharp
+public static void FlickerHeldLightSource( int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players) => ((IEnumerable<Player>)players).FlickerHeldLightSource(flickerCount, delayPerFlicker, forceOff, onTickFeedback);
+```
+
+### 🔹 `WhereAlive()`
+**Description:** Returns only players who are ready and alive.
+```csharp
+public static IEnumerable<Player> WhereAlive(this IEnumerable<Player> players)
+```
+
+### 🔹 `WhereHuman()`
+**Description:** Returns only players who belong to a human faction.
+```csharp
+public static IEnumerable<Player> WhereHuman(this IEnumerable<Player> players)
+```
+
+### 🔹 `WhereNotInPocket()`
+**Description:** Returns only players who are not inside the Pocket Dimension.
+```csharp
+public static IEnumerable<Player> WhereNotInPocket(this IEnumerable<Player> players)
 ```
 
 ### 🔹 `IsEligibleForEscape()`
-**Description:** Determines if a player fulfills basic criteria to trigger an escape sequence.
+**Description:** Returns true if the player meets basic conditions to escape.
 ```csharp
-public static bool IsEligibleForEscape(this Player player, Vector3 escapeZone, float escapeZoneSize)
+public static bool IsEligibleForEscape(this Player player, IEnumerable<Vector3> escapeZones, float escapeZoneSize)
 ```
 
 ### 🔹 `IsInShelter()`
-**Description:** Checks if a player is safely inside a designated shelter structure or location coordinate.
+**Description:** Returns true if the player is inside a shelter room or within any shelter radius.
 ```csharp
-public static bool IsInShelter(this Player player, float shelterZoneSize, IEnumerable<Vector3> cachedShelterLocations, params RoomName[] additionalRooms)
+public static bool IsInShelter(this Player player, float shelterZoneSize, IEnumerable<Vector3> shelterLocations, params RoomName[] additionalRooms)
+```
+
+### 🔹 `IsInExecutiveElevator()`
+**Description:** Returns true if the player is inside an elevator cabin.
+```csharp
+public static bool IsInExecutiveElevator(this Player player)
 ```
 
 ### 🔹 `TryResolveFuzzy()`
-**Description:** Resolves a single player from a fuzzy string identifier using exact matching, substring containment, and Levenshtein distance checks. Completely avoids heavy allocations on large player lists during evaluation cycles.
+**Description:** Attempts to resolve a player from a fuzzy identifier. Supports exact ID, UserId, exact nickname, substring match, and Levenshtein fallback.
 ```csharp
-public static bool TryResolveFuzzy(this IEnumerable<Player> players, string identifier, out Player target, out string errorResponse)
+public static bool TryResolveFuzzy(this IEnumerable<Player> players, string identifier, out Player target, out string error)
 ```
 
 ---
@@ -1011,7 +969,7 @@ public static bool TryResolveFuzzy(this IEnumerable<Player> players, string iden
 ## 📦 Class: PluginConfigExtensions
 
 ### 🔹 `LoadOrCreateSubConfig()`
-**Description:** Atomically loads a decentralized sub-configuration file from the filesystem. Automatically deploys a clean fallback instance, executes validation delegates, and flushes changes to disk if missing or corrupt. <typeparam name="TMainConfig">The core configuration type binding the primary plugin layout framework inheriting from <see cref="LabApiConfig"/>.</typeparam> <typeparam name="TSubConfig">The target modular sub-configuration class layer being initialized.</typeparam>
+**Description:** Loads a sub‑config file or creates a new one if missing or invalid. Runs optional validation and saves the result back to disk. <typeparam name="TMainConfig">Main plugin config type.</typeparam> <typeparam name="TSubConfig">Sub‑config type to load.</typeparam>
 ```csharp
 public static TSubConfig LoadOrCreateSubConfig<TMainConfig, TSubConfig>( this Plugin<TMainConfig> plugin, string fileName, Action<TSubConfig> validationAction = null) where TMainConfig : LabApiConfig, new() where TSubConfig : class, new()
 ```
@@ -1021,165 +979,177 @@ public static TSubConfig LoadOrCreateSubConfig<TMainConfig, TSubConfig>( this Pl
 ## 📦 Class: RoomExtensions
 
 ### 🔹 `GetNeighbors()`
-**Description:** Resolves and collects all valid physically adjacent neighboring <see cref="Room"/> nodes connected directly to this room instance.
+**Description:** Returns all rooms directly connected to this room.
 ```csharp
 public static IEnumerable<Room> GetNeighbors(this Room room)
 ```
 
+### 🔹 `GetElevatorsConnectedToRoom()`
+**Description:** Returns elevators connected to the given room.
+```csharp
+public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+```
+
 ### 🔹 `WhereNotInPocket()`
-**Description:** Filters an enumerable collection stream of rooms to insulate the pipeline against sectors representing the unstable spatial bounds of SCP-106's Pocket Dimension.
+**Description:** Returns all rooms except the Pocket Dimension.
 ```csharp
 public static IEnumerable<Room> WhereNotInPocket(this IEnumerable<Room> rooms)
 ```
 
 ### 🔹 `IsCheckpoint()`
-**Description:** Evaluates if a specific structural <see cref="RoomName"/> token corresponds directly to a tactical zone checkpoint airlock node.
+**Description:** Returns true if the room is a checkpoint.
 ```csharp
-public static bool IsCheckpoint(this RoomName roomName) => roomName is RoomName.LczCheckpointA or RoomName.LczCheckpointB or RoomName.HczCheckpointA or RoomName.HczCheckpointB or RoomName.HczCheckpointToEntranceZone;
+public static bool IsCheckpoint(this RoomName name) => name is RoomName.LczCheckpointA or RoomName.LczCheckpointB or RoomName.HczCheckpointA or RoomName.HczCheckpointB or RoomName.HczCheckpointToEntranceZone;
 ```
 
 ### 🔹 `IsScpRoom()`
-**Description:** Determines whether the designated <see cref="RoomName"/> spatial layout topology represents a secure containment sector for anomalous entities.
+**Description:** Returns true if the room is an SCP containment room.
 ```csharp
-public static bool IsScpRoom(this RoomName roomName) => roomName is RoomName.Lcz173 or RoomName.Lcz330 or RoomName.Hcz049 or RoomName.Hcz079 or RoomName.Hcz096 or RoomName.Hcz106 or RoomName.Hcz939 or RoomName.Lcz914 or RoomName.HczTestroom;
+public static bool IsScpRoom(this RoomName name) => name is RoomName.Lcz173 or RoomName.Lcz330 or RoomName.Hcz049 or RoomName.Hcz079 or RoomName.Hcz096 or RoomName.Hcz106 or RoomName.Hcz939 or RoomName.Lcz914 or RoomName.HczTestroom;
 ```
 
 ### 🔹 `IsArmory()`
-**Description:** Checks if the designated <see cref="RoomName"/> structural context is classified as a high-security tactical weapons or munitions armory depot.
+**Description:** Returns true if the room is an armory.
 ```csharp
-public static bool IsArmory(this RoomName roomName) => roomName is RoomName.LczArmory or RoomName.HczArmory;
+public static bool IsArmory(this RoomName name) => name is RoomName.LczArmory or RoomName.HczArmory;
 ```
 
 ### 🔹 `IsFreeOfEngagedGenerators()`
-**Description:** Verifies defensively if the target <see cref="Room"/> spatial zone is completely free of any power generators that are currently in an active, fully engaged state.
+**Description:** Returns true if the room has no engaged generators.
 ```csharp
 public static bool IsFreeOfEngagedGenerators(this Room room)
 ```
 
 ### 🔹 `IsRoomAndNeighborsFreeOfEngagedGenerators()`
-**Description:** Performs an aggregated spatial validation sweep across the target <see cref="Room"/> and all physically connected adjacent neighbor zones to confirm absolute grid isolation from any active, fully engaged power generators.
+**Description:** Returns true if the room and all its neighbors have no engaged generators.
 ```csharp
 public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
 ```
 
+### 🔹 `IsElevatorActiveInRoom()`
+**Description:** Returns true if any elevator connected to the room is currently moving.
+```csharp
+public static bool IsElevatorActiveInRoom(this Room room)
+```
+
 ### 🔹 `ExecuteActionOnRoomAndNeighbors()`
-**Description:** Executes a specified procedural action delegate graph across a localized room anchor point and seamlessly propagates the delegate pattern execution out into all adjacent physical room nodes safely.
+**Description:** Executes an action on the room and all its neighbors.
 ```csharp
 public static void ExecuteActionOnRoomAndNeighbors(this Room room, Action<Room> action)
 ```
 
+### 🔹 `HandleElevatorsForRoom()`
+**Description:** Executes an action on all elevators connected to the room. s
+```csharp
+public static void HandleElevatorsForRoom(this Room room, float affectChance, Action<Elevator> action)
+```
+
 ### 🔹 `BreakAllDoors()`
-**Description:** Iterates over all door sub-components bound to the target room context to safely locate and fracture any breakable barriers (<see cref="BreakableDoor"/>) that remain intact.
+**Description:** Breaks all breakable doors in the room.
 ```csharp
 public static void BreakAllDoors(this Room room)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe.
+**Description:** Turns off lights in the room for a given duration.
 ```csharp
-public static void TurnOffLights(this Room room, float duration)
+public static void TurnOffLights(this Room room, float duration) => room?.AllLightControllers?.ForEach(lc => lc.FlickerLights(duration));
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Restores electrical power to the room's lighting grid controllers and optionally triggers a brief flicker sequence.
+**Description:** Turns on lights in the room and optionally flickers them.
 ```csharp
-public static void TurnOnLights(this Room room, float flickerDuration = 0f)
+public static void TurnOnLights(this Room room, float flickerDuration = 0f) => room?.AllLightControllers?.ForEach(c => c.FlickerLights(flickerDuration));
 ```
 
 ### 🔹 `TurnOffRoomAndNeighborLights()`
-**Description:** Forcibly suppresses illumination across this room and all physically connected adjacent neighboring rooms simultaneously. Fully DRY implementation utilizing centralized action propagation cascades.
+**Description:** Turns off lights in the room and its neighbors.
 ```csharp
-public static void TurnOffRoomAndNeighborLights(this Room room, float duration, bool forced = false)
+public static void TurnOffRoomAndNeighborLights(this Room room, float duration) => room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOffLights(duration));
 ```
 
 ### 🔹 `TurnOnRoomAndNeighborLights()`
-**Description:** Restores active electrical power and forces an optional brief flickering update sequence across this room and all adjacent neighbors. Fully DRY implementation utilizing centralized action propagation cascades.
+**Description:** Turns on lights in the room and its neighbors.
 ```csharp
-public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f)
+public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f) => room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOnLights(duration));
 ```
 
 ### 🔹 `SetLightsColor()`
-**Description:** Fluently overrides the active rendering illumination color spectrum channel variables for a specific room.
+**Description:** Sets the light color for the room.
 ```csharp
 public static void SetLightsColor(this Room room, Color color)
 ```
 
 ### 🔹 `SetLightsColor()`
-**Description:** Systematically executes a batch color spectrum override sweep across an aggregated collection sequence of rooms.
+**Description:** Sets light color for multiple rooms.
 ```csharp
-public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
+public static void SetLightsColor(this IEnumerable<Room> rooms, Color color) => rooms.ForEach(r => r?.SetLightsColor(color));
 ```
 
 ### 🔹 `SetLightsColor()`
-**Description:** Systematically executes a batch color spectrum override sweep across an inline array of rooms.
+**Description:** Sets light color for multiple rooms (params).
 ```csharp
-public static void SetLightsColor(Color color, params Room[] rooms)
+public static void SetLightsColor(Color color, params Room[] rooms) => ((IEnumerable<Room>)rooms).SetLightsColor(color);
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Systematically suppresses illumination across an aggregated collection sequence of rooms.
+**Description:** Turns off lights for multiple rooms.
 ```csharp
-public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
+public static void TurnOffLights(this IEnumerable<Room> rooms, float duration) => rooms.ForEach(r => r?.TurnOffLights(duration));
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Systematically suppresses illumination across an inline array of rooms.
+**Description:** Turns off lights for multiple rooms (params).
 ```csharp
-public static void TurnOffLights(float duration, params Room[] rooms)
+public static void TurnOffLights(float duration, params Room[] rooms) => ((IEnumerable<Room>)rooms).TurnOffLights(duration);
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Systematically restores electrical power and optionally triggers a brief flicker sequence across a collection of rooms.
+**Description:** Turns on lights for multiple rooms.
 ```csharp
-public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
+public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f) => rooms.ForEach(r => r?.TurnOnLights(flickerDuration));
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Systematically restores electrical power and optionally triggers a brief flicker sequence across an inline array of rooms.
+**Description:** Turns on lights for multiple rooms (params).
 ```csharp
-public static void TurnOnLights(float flickerDuration, params Room[] rooms)
+public static void TurnOnLights(float flickerDuration, params Room[] rooms) => ((IEnumerable<Room>)rooms).TurnOnLights(flickerDuration);
 ```
 
 ### 🔹 `BreakAllDoors()`
-**Description:** Iterates over all door sub-components bound to the target room collection to safely locate and fracture any breakable barriers.
+**Description:** Breaks all breakable doors in multiple rooms.
 ```csharp
-public static void BreakAllDoors(this IEnumerable<Room> rooms)
+public static void BreakAllDoors(this IEnumerable<Room> rooms) => rooms.ForEach(r => r?.BreakAllDoors());
 ```
 
 ### 🔹 `BreakAllDoors()`
-**Description:** Iterates over all door sub-components bound to the target room inline array to safely locate and fracture any breakable barriers.
+**Description:** Breaks all breakable doors in multiple rooms (params).
 ```csharp
-public static void BreakAllDoors(params Room[] rooms)
+public static void BreakAllDoors(params Room[] rooms) => ((IEnumerable<Room>)rooms).BreakAllDoors();
 ```
 
 ### 🔹 `GetRoom()`
-**Description:** Extension method on <see cref="Vector3"/> to seamlessly resolve and fetch the live <see cref="Room"/> instance encompassing the targeted coordinates layer directly from the underlying map topology grid.
+**Description:** Returns the room at the given world position.
 ```csharp
-public static Room GetRoom(this Vector3 position)
+public static Room GetRoom(this Vector3 position) => Room.GetRoomAtPosition(position);
 ```
 
 ### 🔹 `GetDistanceTo()`
-**Description:** Computes the precise linear Euclidean distance between the structural transform center position of the room asset and a targeted raw 3D position vector coordinate.
+**Description:** Returns the distance from the room center to the given position.
 ```csharp
 public static float GetDistanceTo(this Room room, Vector3 position)
 ```
 
 ### 🔹 `IsWithinRadius()`
-**Description:** Performs a high-performance proximity validation query tracking from the room's transform center point utilizing underlying Unity vector squaring math (<c>sqrMagnitude</c>) to avoid high overhead calculation paths.
+**Description:** Returns true if the position is within the given radius from the room center.
 ```csharp
-public static bool IsWithinRadius(this Room room, Vector3 position, float radiusSize)
+public static bool IsWithinRadius(this Room room, Vector3 position, float radius)
 ```
 
 ### 🔹 `FlickerLightsCoroutine()`
-**Description:** Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Room"/> instance.
+**Description:** Executes a flicker animation on the room lights.
 ```csharp
 public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
-```
-
-### 🔹 `FlickerBulkLightsCoroutine()`
-**Description:** Fluently executes a global or batch collection wide lighting flicker animation loop sequence spanning multiple rooms simultaneously.
-```csharp
-public static IEnumerator<float> FlickerBulkLightsCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
 ```
 
 ---
@@ -1187,13 +1157,13 @@ public static IEnumerator<float> FlickerBulkLightsCoroutine(this IEnumerable<Roo
 ## 📦 Class: StringExtensions
 
 ### 🔹 `NormalizeUserId()`
-**Description:** Enforces standard lowercase invariant formatting on a raw network identifier token, mitigating platform-specific auth casing anomalies and dictionary key mismatches.
+**Description:** Returns the user ID in lowercase, or an empty string if null.
 ```csharp
-public static string NormalizeUserId(this string userId)
+public static string NormalizeUserId(this string userId) => userId?.ToLowerInvariant() ?? string.Empty;
 ```
 
 ### 🔹 `ComputeLevenshteinDistance()`
-**Description:** Computes the Levenshtein Distance between two string primitives with zero heap allocations.
+**Description:** Returns the Levenshtein distance between two strings.
 ```csharp
 public static int ComputeLevenshteinDistance(this string source, string target)
 ```
@@ -1203,7 +1173,7 @@ public static int ComputeLevenshteinDistance(this string source, string target)
 ## 📦 Class: TeslaExtensions
 
 ### 🔹 `DisableFor()`
-**Description:** Disables a Tesla gate for a given duration. Optionally forces a discharge trigger.
+**Description:** Disables a Tesla gate for a given duration. Use <paramref name="forceTrigger"/> to trigger a discharge.
 ```csharp
 public static void DisableFor(this Tesla tesla, float duration, bool forceTrigger = true)
 ```
@@ -1211,13 +1181,13 @@ public static void DisableFor(this Tesla tesla, float duration, bool forceTrigge
 ### 🔹 `DisableFor()`
 **Description:** Disables multiple Tesla gates for a given duration.
 ```csharp
-public static void DisableFor(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true)
+public static void DisableFor(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true) => teslas.ForEach(t => t?.DisableFor(duration, forceTrigger));
 ```
 
 ### 🔹 `DisableFor()`
 **Description:** Disables multiple Tesla gates (params overload).
 ```csharp
-public static void DisableFor(float duration, bool forceTrigger, params Tesla[] teslas)
+public static void DisableFor(float duration, bool forceTrigger, params Tesla[] teslas) => ((IEnumerable<Tesla>)teslas).DisableFor(duration, forceTrigger);
 ```
 
 ---
@@ -1225,51 +1195,51 @@ public static void DisableFor(float duration, bool forceTrigger, params Tesla[] 
 ## 📦 Class: TimingExtensions
 
 ### 🔹 `CallDelayedIf()`
-**Description:** Executes an action after a delay if the specified condition evaluates to true.
+**Description:** Calls <paramref name="action"/> after a delay if <paramref name="condition"/> returns true.
 ```csharp
 public static CoroutineHandle CallDelayedIf(float delay, Func<bool> condition, Action action, string coroutineTag = null)
 ```
 
-### 🔹 `KillCoroutine()`
-**Description:** Kills all coroutines bound to the specified string tag.
+### 🔹 `Kill()`
+**Description:** Kills all coroutines bound to this tag.
 ```csharp
-public static void KillCoroutine(this string tag)
+public static void Kill(this string tag)
 ```
 
 ### 🔹 `Kill()`
-**Description:** Kills the coroutine mapped to the specified handle if it is running.
+**Description:** Kills this coroutine handle if it is running.
 ```csharp
 public static void Kill(this CoroutineHandle handle)
 ```
 
-### 🔹 `KillCoroutines()`
-**Description:** Kills all coroutines bound to the collection of string tags.
+### 🔹 `Kill()`
+**Description:** Kills all coroutines bound to the given tags.
 ```csharp
-public static void KillCoroutines(this IEnumerable<string> tags)
-```
-
-### 🔹 `KillCoroutines()`
-**Description:** Kills all coroutines bound to the inline array of string tags.
-```csharp
-public static void KillCoroutines(params string[] tags)
+public static void Kill(this IEnumerable<string> tags) => tags.ForEach(t => t?.Kill());
 ```
 
 ### 🔹 `Kill()`
-**Description:** Kills all coroutines associated with the collection of handles.
+**Description:** Kills all coroutines bound to the given tags (params overload).
 ```csharp
-public static void Kill(this IEnumerable<CoroutineHandle> handles)
+public static void Kill(params string[] tags) => ((IEnumerable<string>)tags).Kill();
 ```
 
-### 🔹 `Kill()`
-**Description:** Kills all coroutines associated with the inline array of handles.
+### 🔹 `KillAll()`
+**Description:** Kills all coroutines associated with the given handles.
 ```csharp
-public static void Kill(params CoroutineHandle[] handles)
+public static void KillAll(this IEnumerable<CoroutineHandle> handles) => handles.ForEach(h => h.Kill());
 ```
 
-### 🔹 `KillAndClear()`
-**Description:** Kills all coroutines in the list using a zero-allocation loop and clears the list.
+### 🔹 `KillAll()`
+**Description:** Kills all coroutines associated with the given handles (params overload).
 ```csharp
-public static void KillAndClear(this List<CoroutineHandle> coroutines)
+public static void KillAll(params CoroutineHandle[] handles) => ((IEnumerable<CoroutineHandle>)handles).KillAll();
+```
+
+### 🔹 `KillAllAndClear()`
+**Description:** Kills all coroutines in the list and clears it.
+```csharp
+public static void KillAllAndClear(this List<CoroutineHandle> handles)
 ```
 
 ---
@@ -1277,33 +1247,33 @@ public static void KillAndClear(this List<CoroutineHandle> coroutines)
 ## 📦 Class: VectorExtensions
 
 ### 🔹 `GetDistanceTo()`
-**Description:** Computes the exact linear Euclidean distance between the source vector and a targeted coordinate position.
+**Description:** Returns the distance between two points.
 ```csharp
-public static float GetDistanceTo(this Vector3 origin, Vector3 target)
+public static float GetDistanceTo(this Vector3 origin, Vector3 target) => Vector3.Distance(origin, target);
 ```
 
 ### 🔹 `GetDistanceSquaredTo()`
-**Description:** Computes the rapid squared distance magnitude between two spatial points, bypassing expensive processor square-root calculation chains.
+**Description:** Returns the squared distance between two points (no square root).
 ```csharp
-public static float GetDistanceSquaredTo(this Vector3 origin, Vector3 target)
+public static float GetDistanceSquaredTo(this Vector3 origin, Vector3 target) => Vector3.SqrMagnitude(origin - target);
 ```
 
 ### 🔹 `GetUpwardReflectedVector()`
-**Description:** Evaluates if the source direction vector points too steeply downwards against a threshold and forcibly reflects it upward utilizing normal plane mirroring algorithms.
+**Description:** Reflects the vector upward if it points too far downward.
 ```csharp
-public static UnityEngine.Vector3 GetUpwardReflectedVector(this UnityEngine.Vector3 direction, float dotThreshold = 0.707f)
+public static Vector3 GetUpwardReflectedVector(this Vector3 direction, float dotThreshold = 0.707f)
 ```
 
 ### 🔹 `GetRandomUpwardSphereVelocity()`
-**Description:** Generates a random mathematical directional unit vector across a spherical layout, completely insulated against downward trajectory drops into floor topologies.
+**Description:** Returns a random upward-facing direction scaled by the given magnitude.
 ```csharp
-public static UnityEngine.Vector3 GetRandomUpwardSphereVelocity(float magnitude = 1f)
+public static Vector3 GetRandomUpwardSphereVelocity(float magnitude = 1f)
 ```
 
 ### 🔹 `Sanitize()`
-**Description:** Audits all float components of a 3D vector against structural corruption anomalies like NaN or Infinity.
+**Description:** Returns the vector unless it contains NaN or Infinity, in which case the fallback is returned.
 ```csharp
-public static UnityEngine.Vector3 Sanitize(this UnityEngine.Vector3 vector, UnityEngine.Vector3 fallback = default)
+public static Vector3 Sanitize(this Vector3 vector, Vector3 fallback = default)
 ```
 
 ---
@@ -1317,31 +1287,25 @@ public static readonly FacilityZone[] All = (FacilityZone[])Enum.GetValues(typeo
 ```
 
 ### 🔹 `GetDoors()`
-**Description:** Returns all doors located inside the specified zone.
+**Description:** Returns all doors located inside the zone.
 ```csharp
 public static IEnumerable<Door> GetDoors(this FacilityZone zone)
 ```
 
-### 🔹 `OpenDoors()`
-**Description:** Opens all doors in the zone.
-```csharp
-public static void OpenDoors(this FacilityZone zone, bool bypassLocks = false) => zone.GetDoors().Open(bypassLocks);
-```
-
-### 🔹 `CloseDoors()`
-**Description:** Closes all doors in the zone.
-```csharp
-public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false) => zone.GetDoors().Close(bypassLocks);
-```
-
 ### 🔹 `SetDoorsLockState()`
-**Description:** Sets the lock state for all doors in the zone.
+**Description:** Sets the lock state of all doors in the zone. Use <paramref name="locked"/> = false to unlock them.
 ```csharp
 public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true) => zone.GetDoors().SetLockState(reason, locked);
 ```
 
+### 🔹 `GetElevators()`
+**Description:** Returns all elevators whose destination rooms belong to the given zone.
+```csharp
+public static IEnumerable<Elevator> GetElevators(this FacilityZone zone)
+```
+
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights in the zone and its elevators for a given duration.
+**Description:** Turns off lights in the zone and its elevators.
 ```csharp
 public static void TurnOffLights(this FacilityZone zone, float duration)
 ```
@@ -1355,7 +1319,7 @@ public static void TurnOnLights(this FacilityZone zone)
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights across multiple zones.
 ```csharp
-public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
+public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration) => zones.ForEach(z => z.TurnOffLights(duration));
 ```
 
 ### 🔹 `TurnOffLights()`
@@ -1367,7 +1331,7 @@ public static void TurnOffLights(float duration, params FacilityZone[] zones) =>
 ### 🔹 `TurnOnLights()`
 **Description:** Turns on lights across multiple zones.
 ```csharp
-public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
+public static void TurnOnLights(this IEnumerable<FacilityZone> zones) => zones.ForEach(z => z.TurnOnLights());
 ```
 
 ### 🔹 `TurnOnLights()`
@@ -1377,7 +1341,7 @@ public static void TurnOnLights(params FacilityZone[] zones) => ((IEnumerable<Fa
 ```
 
 ### 🔹 `FlickerLightsCoroutine()`
-**Description:** Performs a flicker animation on zone lights for a given duration.
+**Description:** Performs a flicker animation on zone lights.
 ```csharp
 public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
 ```
