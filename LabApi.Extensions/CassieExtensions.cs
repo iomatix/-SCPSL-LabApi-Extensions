@@ -11,7 +11,7 @@ namespace LabApi.Extensions
         public static void CassieClear() => Announcer.Clear();
 
         /// <summary>
-        /// Sanitizes a raw CASSIE string by removing carriage returns, replacing newlines with spaces, and trimming whitespace.
+        /// Removes CR/LF and trims whitespace for safe CASSIE usage.
         /// </summary>
         public static string SanitizeCassieString(this string rawMessage)
             => string.IsNullOrWhiteSpace(rawMessage)
@@ -19,218 +19,165 @@ namespace LabApi.Extensions
                 : rawMessage.Replace("\r", "").Replace("\n", " ").Trim();
 
         #region Single Message Dispatchers
+
         /// <summary>
-        /// Glitchifies the specified message internally and dispatches the announcement, returning its playback duration.
+        /// Glitchifies and dispatches a message, returning playback duration.
         /// </summary>
         public static double DispatchGlitchyMessage(string message, float glitchChance, float jamChance)
         {
-            string sanitizedInput = message.SanitizeCassieString();
-            if (string.IsNullOrEmpty(sanitizedInput)) return 0.0;
+            string sanitized = message.SanitizeCassieString();
+            if (string.IsNullOrEmpty(sanitized)) return 0.0;
 
             try
             {
-                // Encapuslate the glitchification internally to eliminate duplicate API arguments
-                string glitchedMessage = CassieGlitchifier.Glitchify(sanitizedInput, glitchChance, jamChance);
-
-                // We set glMessageitchScale to 0f because the text already contains explicit glitch/jam tokens
-                Announcer.Message(glitchedMessage, string.Empty, playBackground: false, glitchScale: 0f);
-
-                return Announcer.CalculateDuration(glitchedMessage, default);
+                string glitched = CassieGlitchifier.Glitchify(sanitized, glitchChance, jamChance);
+                Announcer.Message(glitched, string.Empty, playBackground: false, glitchScale: 0f);
+                return Announcer.CalculateDuration(glitched, default);
             }
             catch (Exception ex)
             {
-                iLogger.Error("Cassie.GlitchyMessage", $"Vocal grid runtime suspension anomaly: {ex.Message}");
+                iLogger.Error("Cassie.GlitchyMessage", ex.Message);
                 return 0.0;
             }
         }
 
         /// <summary>
-        /// Dispatches a standard CASSHE announcement and returns its estimated playback duration using the provided modifiers.
+        /// Dispatches a standard CASSIE message and returns playback duration.
         /// </summary>
         public static double DispatchMessage(string message, CassiePlaybackModifiers modifiers = default)
         {
-            string sanitizedMessage = message.SanitizeCassieString();
-            if (string.IsNullOrEmpty(sanitizedMessage)) return 0.0;
+            string sanitized = message.SanitizeCassieString();
+            if (string.IsNullOrEmpty(sanitized)) return 0.0;
 
             try
             {
-                Announcer.Message($"{sanitizedMessage}", string.Empty, playBackground: false);
-                return Announcer.CalculateDuration(sanitizedMessage, modifiers);
+                Announcer.Message(sanitized, string.Empty, playBackground: false);
+                return Announcer.CalculateDuration(sanitized, modifiers);
             }
             catch (Exception ex)
             {
-                iLogger.Error("Cassie.Message", $"Vocal pipeline critical failure: {ex.Message}");
+                iLogger.Error("Cassie.Message", ex.Message);
                 return 0.0;
             }
         }
 
         /// <summary>
-        /// Sanitizes, formats, and dispatches a CASSIE announcement with custom subtitles and queue priority.
+        /// Dispatches a formatted CASSIE message with optional subtitles and priority.
         /// </summary>
-        public static void ProcessAndDispatchMessage(string message, string customSubtitles, bool shouldClear, float priority, bool disableMessages = false, CassiePlaybackModifiers modifiers = default)
+        public static void ProcessAndDispatchMessage(string message, string subtitles, bool clear, float priority, bool disableMessages = false, CassiePlaybackModifiers modifiers = default)
         {
-            string sanitizedMessage = message.SanitizeCassieString();
-            if (string.IsNullOrEmpty(sanitizedMessage)) return;
+            string sanitized = message.SanitizeCassieString();
+            if (string.IsNullOrEmpty(sanitized)) return;
 
-            if (shouldClear) Announcer.Clear();
+            if (clear) Announcer.Clear();
 
-            string sanitizedSubtitles = customSubtitles.SanitizeCassieString();
-            string processedSubtitles = (!string.IsNullOrEmpty(sanitizedSubtitles) && !disableMessages) ? sanitizedSubtitles : string.Empty;
+            string sanitizedSubs = subtitles.SanitizeCassieString();
+            string finalSubs = (!string.IsNullOrEmpty(sanitizedSubs) && !disableMessages) ? sanitizedSubs : string.Empty;
 
-            // Note: If your native Announcer.Message overload supports CassiePlaybackModifiers, pass it as a parameter here.
-            Announcer.Message($"{sanitizedMessage}", customSubtitles: processedSubtitles, priority: priority, playBackground: false);
+            Announcer.Message(sanitized, customSubtitles: finalSubs, priority: priority, playBackground: false);
         }
+
         #endregion
 
-        #region Batch Message Dispatchers (Zero-Allocation Internal Implementations)
+        #region Batch Message Dispatchers (DRY, KISS, Zero-Allocation)
+
         /// <summary>
-        /// Dispatches a collection of messages sequentially using the specified playback modifiers.
+        /// Dispatches all messages in the collection.
         /// </summary>
-        public static void DispatchMessage(IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
-        {
-            if (messages is null) return;
-
-            if (messages is List<string> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    DispatchMessage(concreteList[i], modifiers);
-                }
-                return;
-            }
-
-            foreach (string message in messages)
-            {
-                DispatchMessage(message, modifiers);
-            }
-        }
+        public static void DispatchMessage(this IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
+            => messages.ForEach(m => DispatchMessage(m, modifiers));
 
         /// <summary>
-        /// Dispatches an inline array of messages sequentially using default playback modifiers.
+        /// Dispatches all provided messages (default modifiers).
         /// </summary>
         public static void DispatchMessage(params string[] messages)
-            => DispatchMessage(messages, default);
+            => ((IEnumerable<string>)messages).DispatchMessage(default);
 
         /// <summary>
-        /// Dispatches an inline array of messages sequentially using the specified playback modifiers.
+        /// Dispatches all provided messages with custom modifiers.
         /// </summary>
         public static void DispatchMessage(CassiePlaybackModifiers modifiers, params string[] messages)
-        {
-            if (messages is null) return;
+            => ((IEnumerable<string>)messages).DispatchMessage(modifiers);
 
-            int count = messages.Length;
-            for (int i = 0; i < count; i++)
-            {
-                DispatchMessage(messages[i], modifiers);
-            }
-        }
         #endregion
 
         #region Utilities & Countdown Mechanics
+
         /// <summary>
-        /// Converts a remaining time integer into a formatted CASSIE countdown announcement string.
+        /// Converts an integer into a formatted CASSIE countdown string.
         /// </summary>
-        public static string ToCassieCountdown(this int notifyTime, string alertContext = "seconds until event detonation")
+        public static string ToCassieCountdown(this int notifyTime, string context = "seconds until event detonation")
         {
-            string sanitizedContext = alertContext.SanitizeCassieString();
-            if (string.IsNullOrEmpty(sanitizedContext)) sanitizedContext = "seconds";
+            string sanitized = context.SanitizeCassieString();
+            if (string.IsNullOrEmpty(sanitized)) sanitized = "seconds";
 
             return notifyTime switch
             {
                 < 5 => $".G3 {notifyTime} .G5",
                 >= 5 and <= 20 => $".G3 {notifyTime} seconds .G5",
-                _ => $".G3 {notifyTime} {sanitizedContext} .G5"
+                _ => $".G3 {notifyTime} {sanitized} .G5"
             };
         }
 
         /// <summary>
-        /// Calculates the playback duration of a single CASSIE message using the provided modifiers.
+        /// Calculates playback duration of a single message.
         /// </summary>
         public static double CalculateCassieMessageDuration(string message, CassiePlaybackModifiers modifiers = default)
         {
-            string sanitizedMessage = message.SanitizeCassieString();
-            if (string.IsNullOrEmpty(sanitizedMessage)) return 0.0;
+            string sanitized = message.SanitizeCassieString();
+            if (string.IsNullOrEmpty(sanitized)) return 0.0;
 
-            return Announcer.CalculateDuration(sanitizedMessage, modifiers);
+            return Announcer.CalculateDuration(sanitized, modifiers);
         }
+
         #endregion
 
-        #region Aggregation Overhead Loops (Zero-Allocation Internal Implementations)
+        #region Duration Aggregation (DRY, Zero-Allocation)
+
         /// <summary>
-        /// Calculates the total duration of a dictionary of messages, mapping each float value to a modifier pitch.
+        /// Calculates total duration of messages with per-message pitch modifiers.
         /// </summary>
         public static double CalculateTotalMessagesDurations(IDictionary<string, float> messageSpeedDictionary)
         {
-            if (messageSpeedDictionary is null || messageSpeedDictionary.Count == 0) return 0.0;
+            if (messageSpeedDictionary == null || messageSpeedDictionary.Count == 0)
+                return 0.0;
 
-            double cumulativeDuration = 0.0;
-            if (messageSpeedDictionary is Dictionary<string, float> concreteDict)
-            {
-                foreach (var kvp in concreteDict)
-                {
-                    CassiePlaybackModifiers modifiers = default;
-                    modifiers.Pitch = kvp.Value;
-                    cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, modifiers);
-                }
-                return cumulativeDuration;
-            }
+            double total = 0.0;
 
             foreach (var kvp in messageSpeedDictionary)
             {
-                CassiePlaybackModifiers modifiers = default;
-                modifiers.Pitch = kvp.Value;
-                cumulativeDuration += CalculateCassieMessageDuration(kvp.Key, modifiers);
+                CassiePlaybackModifiers mod = default;
+                mod.Pitch = kvp.Value;
+                total += CalculateCassieMessageDuration(kvp.Key, mod);
             }
-            return cumulativeDuration;
+
+            return total;
         }
 
         /// <summary>
-        /// Calculates the cumulative playback duration for a collection of messages using the specified modifiers.
+        /// Calculates total duration of all messages in the collection.
         /// </summary>
-        public static double CalculateTotalMessagesDurations(IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
+        public static double CalculateTotalMessagesDurations(this IEnumerable<string> messages, CassiePlaybackModifiers modifiers = default)
         {
-            if (messages is null) return 0.0;
+            if (messages == null) return 0.0;
 
-            double cumulativeDuration = 0.0;
-            if (messages is List<string> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    cumulativeDuration += CalculateCassieMessageDuration(concreteList[i], modifiers);
-                }
-                return cumulativeDuration;
-            }
-
-            foreach (string message in messages)
-            {
-                cumulativeDuration += CalculateCassieMessageDuration(message, modifiers);
-            }
-            return cumulativeDuration;
+            double total = 0.0;
+            messages.ForEach(m => total += CalculateCassieMessageDuration(m, modifiers));
+            return total;
         }
 
         /// <summary>
-        /// Calculates the cumulative playback duration for an inline array of messages using default modifiers.
+        /// Calculates total duration of provided messages (default modifiers).
         /// </summary>
         public static double CalculateTotalMessagesDurations(params string[] messages)
-            => CalculateTotalMessagesDurations(messages, default);
+            => ((IEnumerable<string>)messages).CalculateTotalMessagesDurations(default);
 
         /// <summary>
-        /// Calculates the cumulative playback duration for an inline array of messages using the specified modifiers.
+        /// Calculates total duration of provided messages with custom modifiers.
         /// </summary>
         public static double CalculateTotalMessagesDurations(CassiePlaybackModifiers modifiers, params string[] messages)
-        {
-            if (messages is null || messages.Length == 0) return 0.0;
+            => ((IEnumerable<string>)messages).CalculateTotalMessagesDurations(modifiers);
 
-            double cumulativeDuration = 0.0;
-            int count = messages.Length;
-            for (int i = 0; i < count; i++)
-            {
-                cumulativeDuration += CalculateCassieMessageDuration(messages[i], modifiers);
-            }
-            return cumulativeDuration;
-        }
         #endregion
     }
 }

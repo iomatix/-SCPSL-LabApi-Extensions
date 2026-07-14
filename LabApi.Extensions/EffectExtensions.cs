@@ -85,49 +85,27 @@ namespace LabApi.Extensions
         }
         #endregion
 
-        #region Batch & Params Operations (Added for API Consistency)
+        #region Batch & Params Operations (DRY, KISS, Zero-Allocation)
+
         /// <summary>
-        /// Enables a specific status effect on a collection of players.
+        /// Enables a status effect for all players in the collection.
         /// </summary>
         public static void EnableEffect(this IEnumerable<Player> players, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
-        {
-            if (players is null) return;
-
-            if (players is List<Player> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    concreteList[i].EnableEffect(effect, intensity, duration);
-                }
-                return;
-            }
-
-            foreach (Player player in players)
-            {
-                player.EnableEffect(effect, intensity, duration);
-            }
-        }
+            => players.ForEach(p => p?.EnableEffect(effect, intensity, duration));
 
         /// <summary>
-        /// Enables a specific status effect on an inline array of players using default intensity and duration.
+        /// Enables a status effect for all provided players (default intensity and duration).
         /// </summary>
         public static void EnableEffect(FacilityEffectType effect, params Player[] players)
-            => EnableEffect(players, effect);
+            => ((IEnumerable<Player>)players).EnableEffect(effect);
 
         /// <summary>
-        /// Enables a specific status effect on an inline array of players with custom intensity and duration.
+        /// Enables a status effect for all provided players with custom intensity and duration.
         /// </summary>
         public static void EnableEffect(FacilityEffectType effect, byte intensity, float duration, params Player[] players)
-        {
-            if (players is null) return;
+            => ((IEnumerable<Player>)players).EnableEffect(effect, intensity, duration);
 
-            int count = players.Length;
-            for (int i = 0; i < count; i++)
-            {
-                players[i].EnableEffect(effect, intensity, duration);
-            }
-        }
         #endregion
+
     }
 }

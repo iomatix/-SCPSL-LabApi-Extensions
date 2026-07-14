@@ -3,50 +3,60 @@
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides high-performance string manipulation and network identity normalization layers.
+    /// Simple helpers for working with strings.
     /// </summary>
     public static class StringExtensions
     {
         /// <summary>
-        /// Enforces standard lowercase invariant formatting on a raw network identifier token,
-        /// mitigating platform-specific auth casing anomalies and dictionary key mismatches.
+        /// Returns the user ID in lowercase, or an empty string if null.
         /// </summary>
-        /// <param name="userId">The raw user identity string to be processed.</param>
-        /// <returns>A sanitized, lowercase invariant string, or an empty string if the source is null.</returns>
         public static string NormalizeUserId(this string userId)
-        {
-            return userId != null ? userId.ToLowerInvariant() : string.Empty;
-        }
+            => userId?.ToLowerInvariant() ?? string.Empty;
 
         /// <summary>
-        /// Computes the Levenshtein Distance between two string primitives with zero heap allocations.
+        /// Returns the Levenshtein distance between two strings.
         /// </summary>
-        /// <param name="source">The source string.</param>
-        /// <param name="target">The target string.</param>
-        /// <returns>The Levenshtein Distance between the two strings. Used primarily for fuzzy string matching.</returns>
         public static int ComputeLevenshteinDistance(this string source, string target)
         {
+            if (source == null || target == null)
+                return int.MaxValue;
+
+            if (source == target)
+                return 0;
+
             int n = source.Length;
             int m = target.Length;
-            int[,] matrix = new int[n + 1, m + 1];
 
             if (n == 0) return m;
             if (m == 0) return n;
 
-            for (int i = 0; i <= n; matrix[i, 0] = i++) { }
-            for (int j = 0; j <= m; matrix[0, j] = j++) { }
+            // Rolling array: only two rows instead of full matrix
+            int[] prev = new int[m + 1];
+            int[] curr = new int[m + 1];
+
+            for (int j = 0; j <= m; j++)
+                prev[j] = j;
 
             for (int i = 1; i <= n; i++)
             {
+                curr[0] = i;
+
                 for (int j = 1; j <= m; j++)
                 {
-                    int cost = (target[j - 1] == source[i - 1]) ? 0 : 1;
-                    matrix[i, j] = Math.Min(
-                        Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
-                        matrix[i - 1, j - 1] + cost);
+                    int cost = source[i - 1] == target[j - 1] ? 0 : 1;
+
+                    curr[j] = Math.Min(
+                        Math.Min(curr[j - 1] + 1, prev[j] + 1),
+                        prev[j - 1] + cost);
                 }
+
+                // Swap rows
+                var temp = prev;
+                prev = curr;
+                curr = temp;
             }
-            return matrix[n, m];
+
+            return prev[m];
         }
     }
 }

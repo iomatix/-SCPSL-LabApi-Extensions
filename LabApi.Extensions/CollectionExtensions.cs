@@ -5,128 +5,119 @@ using System.Collections.Generic;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides high-performance fluent utility extensions for advanced collection mappings and dictionary state engines.
+    /// Simple helpers for working with collections and cooldown dictionaries.
     /// </summary>
     public static class CollectionExtensions
     {
         /// <summary>
-        /// Evaluates a temporal cooldown window for a specific key profile. 
-        /// If the tracking node is ready, executes the payload and automatically commits the new timestamp.
+        /// Runs the action for every item in the collection.
+        /// Uses a zero‑allocation fast‑path for List<T>.
         /// </summary>
-        /// <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
-        /// <param name="cooldownMap">The backing storage dictionary tracking execution milestones.</param>
-        /// <param name="key">The specific instance identity key target checked for rate limiting.</param>
-        /// <param name="window">The required minimum structural <see cref="TimeSpan"/> lock window before the action can rerun.</param>
-        /// <param name="throttleAction">The operational delegate invoked seamlessly upon a successful readiness check.</param>
-        /// <returns><c>true</c> if the cooldown has successfully elapsed and the action executed; otherwise, <c>false</c>.</returns>
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
+        {
+            if (source == null || action == null)
+                return;
+
+            if (source is List<T> list)
+            {
+                int count = list.Count;
+                for (int i = 0; i < count; i++)
+                    action(list[i]);
+                return;
+            }
+
+            foreach (var item in source)
+                action(item);
+        }
+
+        /// <summary>
+        /// Executes the action if the cooldown for the key has elapsed.
+        /// Updates the timestamp and returns true if executed.
+        /// </summary>
         public static bool ExecuteThrottled<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan window, Action throttleAction)
         {
-            if (cooldownMap is null || throttleAction is null) return false;
+            if (cooldownMap is null || throttleAction is null)
+                return false;
 
             DateTime now = DateTime.UtcNow;
 
-            if (cooldownMap.TryGetValue(key, out DateTime lastExecutionTime))
+            if (cooldownMap.TryGetValue(key, out var lastTime))
             {
-                if (now - lastExecutionTime < window)
-                {
+                if (now - lastTime < window)
                     return false;
-                }
             }
 
-            throttleAction.Invoke();
+            throttleAction();
             cooldownMap[key] = now;
             return true;
         }
 
         /// <summary>
-        /// Systematically purges all historical mapping entries whose tracking timestamps have safely elapsed past a specific temporal comparison index.
-        /// Mitigates collection modification exceptions by isolating target records dynamically via zero-allocation memory pooling.
+        /// Removes all entries whose timestamps are older than the comparison time.
         /// </summary>
-        /// <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
-        /// <param name="dictionary">The target backing storage dictionary undergoing reference cleanup.</param>
-        /// <param name="comparisonTime">The core current <see cref="DateTime"/> index acting as the expiration threshold criteria.</param>
         public static void PruneExpired<TKey>(this IDictionary<TKey, DateTime> dictionary, DateTime comparisonTime)
         {
-            if (dictionary is null || dictionary.Count == 0) return;
+            if (dictionary is null || dictionary.Count == 0)
+                return;
 
-            int totalCount = dictionary.Count;
-
-            // Performance Optimization: Rent contiguous memory from thread-safe ArrayPool to eliminate GC heap allocation spikes
-            TKey[] rentedStorage = ArrayPool<TKey>.Shared.Rent(totalCount);
-            int expiredCount = 0;
+            int total = dictionary.Count;
+            TKey[] buffer = ArrayPool<TKey>.Shared.Rent(total);
+            int expired = 0;
 
             try
             {
-                // Performance Optimization: Pattern match concrete Dictionary to bypass interface dispatch allocation and leverage struct enumerator
-                if (dictionary is Dictionary<TKey, DateTime> concreteDict)
+                if (dictionary is Dictionary<TKey, DateTime> concrete)
                 {
-                    foreach (KeyValuePair<TKey, DateTime> kvp in concreteDict)
+                    foreach (var kvp in concrete)
                     {
                         if (comparisonTime >= kvp.Value)
-                        {
-                            rentedStorage[expiredCount++] = kvp.Key;
-                        }
+                            buffer[expired++] = kvp.Key;
                     }
                 }
                 else
                 {
-                    foreach (KeyValuePair<TKey, DateTime> kvp in dictionary)
+                    foreach (var kvp in dictionary)
                     {
                         if (comparisonTime >= kvp.Value)
-                        {
-                            rentedStorage[expiredCount++] = kvp.Key;
-                        }
+                            buffer[expired++] = kvp.Key;
                     }
                 }
 
-                // Mutate the backing collection safely outside the evaluation iteration loop boundary
-                for (int i = 0; i < expiredCount; i++)
-                {
-                    dictionary.Remove(rentedStorage[i]);
-                }
+                for (int i = 0; i < expired; i++)
+                    dictionary.Remove(buffer[i]);
             }
             finally
             {
-                // Return rented buffer block to shared pool and clear data segments safely to avoid reference leaks
-                ArrayPool<TKey>.Shared.Return(rentedStorage, clearArray: true);
+                ArrayPool<TKey>.Shared.Return(buffer, clearArray: true);
             }
         }
 
         /// <summary>
-        /// Evaluates defensively whether a specific key profile is currently locked within an active temporal cooldown window.
+        /// Returns true if the key exists and its cooldown has not yet expired.
         /// </summary>
-        /// <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
-        /// <param name="cooldownMap">The target backing storage dictionary tracking execution milestones.</param>
-        /// <param name="key">The specific instance identity key target checked for active cooldown metrics.</param>
-        /// <returns><c>true</c> if the tracking node exists and its registered expiration timestamp sits in the future; otherwise, <c>false</c>.</returns>
         public static bool IsCooldownActive<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key)
         {
-            if (cooldownMap is null || cooldownMap.Count == 0) return false;
+            if (cooldownMap is null || cooldownMap.Count == 0)
+                return false;
 
-            return cooldownMap.TryGetValue(key, out DateTime expiryTime) && DateTime.UtcNow < expiryTime;
+            return cooldownMap.TryGetValue(key, out var expiry) &&
+                   DateTime.UtcNow < expiry;
         }
 
         /// <summary>
-        /// Atomically evaluates a temporal gate check for a specific key target. 
-        /// If the lock window has elapsed, automatically commits a new future expiration milestone and grants authorization.
+        /// Returns true if the cooldown has elapsed and commits a new expiration timestamp.
         /// </summary>
-        /// <typeparam name="TKey">The structural identity lookup key tracking type.</typeparam>
-        /// <param name="cooldownMap">The backing storage dictionary tracking execution milestones.</param>
-        /// <param name="key">The specific instance identity key target checked for rate limiting.</param>
-        /// <param name="lockWindow">The chronological execution lock window duration applied if authorization is granted.</param>
-        /// <returns><c>true</c> if the gate was open, authorization was granted, and the new lock was committed; otherwise, <c>false</c>.</returns>
         public static bool TryAcquireLock<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan lockWindow)
         {
-            if (cooldownMap is null) return false;
+            if (cooldownMap is null)
+                return false;
 
             DateTime now = DateTime.UtcNow;
 
-            if (cooldownMap.TryGetValue(key, out DateTime nextAllowedTime))
+            if (cooldownMap.TryGetValue(key, out var nextAllowed))
             {
-                if (now < nextAllowedTime)
-                {
+                if (now < nextAllowed)
                     return false;
-                }
             }
 
             cooldownMap[key] = now + lockWindow;

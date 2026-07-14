@@ -1,48 +1,43 @@
 ﻿using LabApi.Events.CustomHandlers;
+using System.Collections.Generic;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides high-performance utility abstraction overloads for batch manipulating LabAPI event subscription pipelines.
+    /// Utility extensions for registering and unregistering LabAPI event handlers.
     /// </summary>
     public static class HandlerExtensions
     {
-        /// <summary>
-        /// Systematically registers an aggregated inline array sequence of event handlers onto the central framework routing engine.
-        /// </summary>
-        /// <param name="handlers">The array layout tracking the target custom events handlers deployed into server memory spaces.</param>
-        public static void RegisterAll(params CustomEventsHandler[] handlers) // TODO: IEnumerable + overload
-        {
-            if (handlers is null) return;
-
-            int count = handlers.Length;
-            for (int i = 0; i < count; i++)
-            {
-                CustomEventsHandler handler = handlers[i];
-                if (handler is not null)
-                {
-                    CustomHandlersManager.RegisterEventsHandler(handler);
-                }
-            }
-        }
+        #region Register
 
         /// <summary>
-        /// Systematically evicts and unregisters an aggregated inline array sequence of event handlers from the central framework routing engine.
+        /// Registers multiple event handlers.
         /// </summary>
-        /// <param name="handlers">The array layout tracking the target custom events handlers cleared out from memory spaces.</param>
-        public static void UnregisterAll(params CustomEventsHandler[] handlers) // TODO: IEnumerable + overload
-        {
-            if (handlers is null) return;
+        public static void RegisterAll(this IEnumerable<CustomEventsHandler> handlers)
+            => handlers.ForEach(h => CustomHandlersManager.RegisterEventsHandler(h));
 
-            int count = handlers.Length;
-            for (int i = 0; i < count; i++)
-            {
-                CustomEventsHandler handler = handlers[i];
-                if (handler is not null)
-                {
-                    CustomHandlersManager.UnregisterEventsHandler(handler);
-                }
-            }
-        }
+        /// <summary>
+        /// Registers multiple event handlers (params overload).
+        /// </summary>
+        public static void RegisterAll(params CustomEventsHandler[] handlers)
+            => ((IEnumerable<CustomEventsHandler>)handlers).RegisterAll();
+
+        #endregion
+
+        #region Unregister
+
+        /// <summary>
+        /// Unregisters multiple event handlers.
+        /// </summary>
+        public static void UnregisterAll(this IEnumerable<CustomEventsHandler> handlers)
+            => handlers.ForEach(h => CustomHandlersManager.UnregisterEventsHandler(h));
+
+        /// <summary>
+        /// Unregisters multiple event handlers (params overload).
+        /// </summary>
+        public static void UnregisterAll(params CustomEventsHandler[] handlers)
+            => ((IEnumerable<CustomEventsHandler>)handlers).UnregisterAll();
+
+        #endregion
     }
 }

@@ -5,58 +5,70 @@ using System.Reflection;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Reflection and manifest tracking utilities for managing embedded assembly assets fluently.
+    /// Helpers for working with embedded resources inside assemblies.
     /// </summary>
     public static class AssemblyExtensions
     {
-        // Thread-safe repository map isolating assembly references from iterative reflection lookups
-        private static readonly ConcurrentDictionary<Assembly, string[]> ResourceManifestCache = new ConcurrentDictionary<Assembly, string[]>();
+        // Cache to avoid repeated reflection calls.
+        private static readonly ConcurrentDictionary<Assembly, string[]> ResourceManifestCache
+            = new ConcurrentDictionary<Assembly, string[]>();
 
         /// <summary>
-        /// Dynamically resolves an embedded manifest resource pathway matching primary identifiers or structural fallback names.
+        /// Finds an embedded resource inside the assembly.
+        /// Looks for: primaryKey + extension, primaryKey with dots replaced by underscores, or any fallback token.
         /// </summary>
-        /// <param name="assembly">The targeting assembly domain containing the embedded assets.</param>
-        /// <param name="primaryKey">The core identifier string tracking the asset.</param>
-        /// <param name="fileExtension">The target file extension including the leading dot (e.g., '.wav'). Defaults to '.wav'.</param>
-        /// <param name="alternativeTokens">Optional fallback identifiers or enum-based naming keys to validate against.</param>
-        /// <returns>The fully qualified manifest resource path if located cleanly; otherwise, null.</returns>
-        public static string FindEmbeddedAsset(this Assembly assembly, string primaryKey, string fileExtension = ".wav", params string[] alternativeTokens)
+        /// <param name="assembly">Assembly that contains the embedded resources.</param>
+        /// <param name="primaryKey">Main name to search for (without extension).</param>
+        /// <param name="fileExtension">File extension including the dot (e.g. ".wav").</param>
+        /// <param name="alternativeTokens">Optional fallback names to try if the primary key fails.</param>
+        /// <returns>
+        /// Full manifest resource path if found; otherwise <c>null</c>.
+        /// </returns>
+        public static string FindEmbeddedAsset(
+            this Assembly assembly,
+            string primaryKey,
+            string fileExtension = ".wav",
+            params string[] alternativeTokens)
         {
             if (assembly == null || string.IsNullOrWhiteSpace(primaryKey))
                 return null;
 
-            // Performance Optimization: Cache extraction layout prevents repeated reflection array generation loops
-            if (!ResourceManifestCache.TryGetValue(assembly, out string[] resourceNames))
+            // Load or retrieve cached manifest names.
+            if (!ResourceManifestCache.TryGetValue(assembly, out var resourceNames))
             {
                 resourceNames = assembly.GetManifestResourceNames();
                 ResourceManifestCache.TryAdd(assembly, resourceNames);
             }
 
-            // Performance Optimization: Bypass allocation sweep if dot mapping notation isn't detected
-            string sanitizedUnderscoreKey = primaryKey.Contains(".") ? primaryKey.Replace(".", "_") : primaryKey;
+            string sanitizedKey = primaryKey.Contains(".")
+                ? primaryKey.Replace(".", "_")
+                : primaryKey;
+
+            string primaryMatch = $"{primaryKey}{fileExtension}";
+            string underscoreMatch = $"{sanitizedKey}{fileExtension}";
 
             int resourceCount = resourceNames.Length;
-            int alternativeCount = alternativeTokens?.Length ?? 0;
+            int fallbackCount = alternativeTokens?.Length ?? 0;
 
-            string primaryTargetMatch = $"{primaryKey}{fileExtension}";
-            string underscoreTargetMatch = $"{sanitizedUnderscoreKey}{fileExtension}";
-
-            // High-Performance Pipeline: Replaced allocation-heavy LINQ (FirstOrDefault/Any) with zero-alloc indexed loops
             for (int i = 0; i < resourceCount; i++)
             {
                 string resource = resourceNames[i];
-                if (resource == null) continue;
+                if (resource == null)
+                    continue;
 
-                if (resource.EndsWith(primaryTargetMatch, StringComparison.OrdinalIgnoreCase) ||
-                    resource.EndsWith(underscoreTargetMatch, StringComparison.OrdinalIgnoreCase))
+                // Primary key match
+                if (resource.EndsWith(primaryMatch, StringComparison.OrdinalIgnoreCase) ||
+                    resource.EndsWith(underscoreMatch, StringComparison.OrdinalIgnoreCase))
                 {
                     return resource;
                 }
 
-                for (int j = 0; j < alternativeCount; j++)
+                // Fallback tokens
+                for (int j = 0; j < fallbackCount; j++)
                 {
                     string token = alternativeTokens[j];
-                    if (!string.IsNullOrWhiteSpace(token) && resource.EndsWith($"{token}{fileExtension}", StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrWhiteSpace(token) &&
+                        resource.EndsWith($"{token}{fileExtension}", StringComparison.OrdinalIgnoreCase))
                     {
                         return resource;
                     }

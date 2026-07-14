@@ -9,144 +9,173 @@ using UnityEngine;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides extension methods for <see cref="FacilityZone"/> structures,
-    /// enabling zone-wide illumination overrides, strobe animations, and bulk door operations.
+    /// Utility extensions for working with <see cref="FacilityZone"/>:
+    /// doors, lights, elevators and zone-wide animations.
     /// </summary>
     public static class ZoneExtensions
     {
-        #region Cached Zone Registry
+        #region Zone Registry
+
         /// <summary>
-        /// Cached array containing all valid facility zone tokens to eliminate runtime enum allocation overhead.
+        /// Cached array of all facility zones (zero enum allocation).
         /// </summary>
         public static readonly FacilityZone[] All = (FacilityZone[])Enum.GetValues(typeof(FacilityZone));
+
         #endregion
 
-        #region Zone Door Operations
+        #region Door Operations
+
         /// <summary>
-        /// Resolves and aggregates all <see cref="Door"/> instances deployed within the specified facility zone boundary.
+        /// Returns all doors located inside the zone.
         /// </summary>
-        /// <param name="zone">The target facility zone context to query.</param>
-        /// <returns>A sequence of doors located inside the targeted zone.</returns>
         public static IEnumerable<Door> GetDoors(this FacilityZone zone)
         {
-            foreach (Room room in Room.List)
+            foreach (var room in Room.List)
             {
-                if (room is null || room.Zone != zone || room.Doors is null) continue;
+                if (room is null || room.Zone != zone || room.Doors is null)
+                    continue;
 
-                foreach (Door door in room.Doors)
-                {
+                foreach (var door in room.Doors)
                     yield return door;
+            }
+        }
+
+        public static void OpenDoors(this FacilityZone zone, bool bypassLocks = false)
+            => zone.GetDoors().Open(bypassLocks);
+
+        public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false)
+            => zone.GetDoors().Close(bypassLocks);
+
+        /// <summary>
+        /// Sets the lock state of all doors in the zone.  
+        /// Use <paramref name="locked"/> = false to unlock them.
+        /// </summary>
+        public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true)
+            => zone.GetDoors().SetLockState(reason, locked);
+
+        public static void LockElevators(this FacilityZone zone)
+        {
+            zone.GetElevators().ForEach(e => e.LockAllDoors());
+        }
+
+        public static void LockElevatorsInZone(FacilityZone zone)
+            => zone.LockElevators();
+
+        public static void UnlockElevators(this FacilityZone zone)
+        {
+            zone.GetElevators().ForEach(e => e.UnlockAllDoors());
+        }
+
+        public static void UnlockElevatorsInZone(FacilityZone zone)
+            => zone.UnlockElevators();
+
+        #endregion
+
+        #region Elevator Operations
+
+        /// <summary>
+        /// Returns all elevators whose destination rooms belong to the given zone.
+        /// </summary>
+        public static IEnumerable<Elevator> GetElevators(this FacilityZone zone)
+        {
+            foreach (var elevator in Elevator.List)
+            {
+                var rooms = elevator?.CurrentDestination?.Rooms;
+                if (rooms is null)
+                    continue;
+
+                foreach (var r in rooms)
+                {
+                    if (Room.Get(r.Base)?.Zone == zone)
+                    {
+                        yield return elevator;
+                        break;
+                    }
                 }
             }
         }
 
-        /// <summary>
-        /// Forcibly unseals all doors located within the targeted facility zone boundary.
-        /// </summary>
-        /// <param name="zone">The target facility zone undergoing bulk door opening.</param>
-        /// <param name="bypassLocks">If set to <c>true</c>, overrides active server-side door locks.</param>
-        public static void OpenDoors(this FacilityZone zone, bool bypassLocks = false)
-        {
-            zone.GetDoors().Open(bypassLocks);
-        }
+        public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
+            => zone.GetElevators();
 
-        /// <summary>
-        /// Forcibly seals all doors located within the targeted facility zone boundary.
-        /// </summary>
-        /// <param name="zone">The target facility zone undergoing bulk door closure.</param>
-        /// <param name="bypassLocks">If set to <c>true</c>, overrides active server-side door locks.</param>
-        public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false)
-        {
-            zone.GetDoors().Close(bypassLocks);
-        }
-
-        /// <summary>
-        /// Updates the administrative lock state for all doors across an entire facility zone under a specific lock reason.
-        /// </summary>
-        /// <param name="zone">The target facility zone undergoing lock state mutation.</param>
-        /// <param name="reason">The specific structural lock reason applied or released.</param>
-        /// <param name="locked">If set to <c>true</c>, engages the lock; if <c>false</c>, releases the lock constraint.</param>
-        public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true)
-        {
-            zone.GetDoors().SetLockState(reason, locked);
-        }
         #endregion
 
-        #region Single Zone Illumination Overrides
+        #region Single-Zone Lights
+
         /// <summary>
-        /// Forcibly suppresses all layout light controllers and connected elevator cabins across an entire facility zone for a designated duration.
+        /// Turns off lights in the zone and its elevators.
         /// </summary>
         public static void TurnOffLights(this FacilityZone zone, float duration)
         {
             Map.TurnOffLights(duration, zone);
-
-            foreach (Elevator elevator in ElevatorExtensions.GetElevatorsInZone(zone))
-            {
-                elevator.TurnOffLights(duration);
-            }
+            zone.GetElevators().ForEach(e => e.TurnOffLights(duration));
         }
 
         /// <summary>
-        /// Instantly restores electrical power to all light controllers and connected elevator cabins across a specific facility zone.
+        /// Turns on lights in the zone and its elevators.
         /// </summary>
         public static void TurnOnLights(this FacilityZone zone)
         {
             Map.TurnOnLights(zone);
-
-            foreach (Elevator elevator in ElevatorExtensions.GetElevatorsInZone(zone))
-            {
-                elevator.TurnOnLights();
-            }
+            zone.GetElevators().ForEach(e => e.TurnOnLights());
         }
+
         #endregion
 
-        #region Bulk Collection Illumination Overrides
+        #region Multi-Zone Lights (IEnumerable + params)
+
         /// <summary>
-        /// Forcibly suppresses illumination across a collection sequence of facility zones simultaneously.
+        /// Turns off lights across multiple zones.
         /// </summary>
         public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
-        {
-            if (zones is null) return;
-
-            foreach (FacilityZone zone in zones)
-            {
-                zone.TurnOffLights(duration);
-            }
-        }
+        => zones.ForEach(z => z.TurnOffLights(duration));
+      
+        /// <summary>
+        /// Turns off lights across multiple zones (params overload).
+        /// </summary>
+        public static void TurnOffLights(float duration, params FacilityZone[] zones)
+            => ((IEnumerable<FacilityZone>)zones).TurnOffLights(duration);
 
         /// <summary>
-        /// Instantly restores operational grid power parameters across an entire collection sequence of facility zones.
+        /// Turns on lights across multiple zones.
         /// </summary>
         public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
-        {
-            if (zones is null) return;
+        => zones.ForEach(z => z.TurnOnLights());
+        
 
-            foreach (FacilityZone zone in zones)
-            {
-                zone.TurnOnLights();
-            }
-        }
+        /// <summary>
+        /// Turns on lights across multiple zones (params overload).
+        /// </summary>
+        public static void TurnOnLights(params FacilityZone[] zones)
+            => ((IEnumerable<FacilityZone>)zones).TurnOnLights();
+
         #endregion
 
-        #region Zone Animation Pipelines
+        #region Zone Animations (Unified Flicker)
+
         /// <summary>
-        /// Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
+        /// Performs a flicker animation on zone lights.
         /// </summary>
-        public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
+        public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
         {
             float interval = 1f / frequency.LimitMin(0.1f);
-            int flickers = (int)Math.Round(duration / interval);
+            float half = interval * 0.5f;
+            int flickers = (int)(duration / interval);
 
-            Map.SetColorOfLights(color, targetZone);
+            Map.SetColorOfLights(color, zone);
+
             for (int i = 0; i < flickers; i++)
             {
-                Map.TurnOffLights(interval * 0.5f, targetZone);
-                yield return Timing.WaitForSeconds(interval * 0.5f);
-                Map.TurnOnLights(targetZone);
-                yield return Timing.WaitForSeconds(interval * 0.5f);
+                Map.TurnOffLights(half, zone);
+                yield return Timing.WaitForSeconds(half);
+
+                Map.TurnOnLights(zone);
+                yield return Timing.WaitForSeconds(half);
             }
-            Map.ResetColorOfLights(targetZone);
+
+            Map.ResetColorOfLights(zone);
         }
+
         #endregion
     }
 }

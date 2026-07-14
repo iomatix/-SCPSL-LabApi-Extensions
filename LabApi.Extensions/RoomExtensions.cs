@@ -1,540 +1,390 @@
-﻿using LabApi.Features.Wrappers;
+﻿using LabApi.Extensions.Misc;
+using LabApi.Features.Wrappers;
 using MapGeneration;
 using MEC;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides enterprise-grade extension methods for <see cref="Room"/> and <see cref="RoomName"/> structures,
-    /// enabling high-performance map routing lookup, safe generator state validation, and environmental grid illumination overrides.
+    /// Utility extensions for working with <see cref="Room"/> and <see cref="RoomName"/>.
+    /// Includes adjacency lookup, generator checks, lighting control, door operations and spatial helpers.
     /// </summary>
     public static class RoomExtensions
     {
-        #region Adjacency & Neighbor Routing (DRY Engine)
+        #region Neighbor Lookup
 
         /// <summary>
-        /// Resolves and collects all valid physically adjacent neighboring <see cref="Room"/> nodes connected directly to this room instance.
+        /// Returns all rooms directly connected to this room.
         /// </summary>
-        /// <param name="room">The source room anchor node initiating the topology adjacency query.</param>
-        /// <returns>An enumerable collection of valid neighboring initialized <see cref="Room"/> instances.</returns>
         public static IEnumerable<Room> GetNeighbors(this Room room)
         {
-            if (room?.ConnectedRooms is null) yield break;
+            if (room?.ConnectedRooms is null)
+                yield break;
 
-            foreach (var roomIdentifier in room.ConnectedRooms)
+            foreach (var id in room.ConnectedRooms)
             {
-                var neighborRoom = Room.Get(roomIdentifier);
-                if (neighborRoom is not null)
-                {
-                    yield return neighborRoom;
-                }
+                var neighbor = Room.Get(id);
+                if (neighbor != null)
+                    yield return neighbor;
+            }
+        }
+
+        /// <summary>
+        /// Returns elevators connected to the given room.
+        /// </summary>
+        public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+        {
+            if (room is null)
+                yield break;
+
+            foreach (var elevator in room.GetElevatorsConnectedToRoom())
+            {
+                if (elevator?.CurrentDestination?.Rooms?.Contains(room) == true)
+                    yield return elevator;
             }
         }
 
         #endregion
 
-        #region Collection Query Extensions
+        #region Room Collection Filters
 
         /// <summary>
-        /// Filters an enumerable collection stream of rooms to insulate the pipeline against sectors 
-        /// representing the unstable spatial bounds of SCP-106's Pocket Dimension.
+        /// Returns all rooms except the Pocket Dimension.
         /// </summary>
-        /// <param name="rooms">The source collection of room architectural sectors undergoing dimension audit.</param>
-        /// <returns>A filtered enumerable sequence layout containing rooms outside the pocket dimension zone.</returns>
         public static IEnumerable<Room> WhereNotInPocket(this IEnumerable<Room> rooms)
         {
-            if (rooms is null) return Enumerable.Empty<Room>();
+            if (rooms is null)
+                yield break;
 
-            List<Room> filtered = new();
-            foreach (Room room in rooms)
+            if (rooms is List<Room> list)
             {
-                if (room is not null && room.Name != RoomName.Pocket)
+                int count = list.Count;
+                for (int i = 0; i < count; i++)
                 {
-                    filtered.Add(room);
+                    var room = list[i];
+                    if (room != null && room.Name != RoomName.Pocket)
+                        yield return room;
                 }
+                yield break;
             }
-            return filtered;
+
+            foreach (var room in rooms)
+            {
+                if (room != null && room.Name != RoomName.Pocket)
+                    yield return room;
+            }
         }
 
         #endregion
 
-        #region Room Name Extensions
+        #region RoomName Classification
 
         /// <summary>
-        /// Evaluates if a specific structural <see cref="RoomName"/> token corresponds directly to a tactical zone checkpoint airlock node.
+        /// Returns true if the room is a checkpoint.
         /// </summary>
-        /// <param name="roomName">The source <see cref="RoomName"/> enumeration literal target requested for evaluation.</param>
-        /// <returns><c>true</c> if the room layout represents a checkpoint security node; otherwise, <c>false</c>.</returns>
-        public static bool IsCheckpoint(this RoomName roomName) =>
-            roomName is RoomName.LczCheckpointA
-                      or RoomName.LczCheckpointB
-                      or RoomName.HczCheckpointA
-                      or RoomName.HczCheckpointB
-                      or RoomName.HczCheckpointToEntranceZone;
+        public static bool IsCheckpoint(this RoomName name) =>
+            name is RoomName.LczCheckpointA
+                or RoomName.LczCheckpointB
+                or RoomName.HczCheckpointA
+                or RoomName.HczCheckpointB
+                or RoomName.HczCheckpointToEntranceZone;
 
         /// <summary>
-        /// Determines whether the designated <see cref="RoomName"/> spatial layout topology represents a secure containment sector for anomalous entities.
+        /// Returns true if the room is an SCP containment room.
         /// </summary>
-        /// <param name="roomName">The source <see cref="RoomName"/> enumeration literal target requested for evaluation.</param>
-        /// <returns><c>true</c> if the layout maps to an anomalous entity containment vault zone; otherwise, <c>false</c>.</returns>
-        public static bool IsScpRoom(this RoomName roomName) =>
-            roomName is RoomName.Lcz173
-                      or RoomName.Lcz330
-                      or RoomName.Hcz049
-                      or RoomName.Hcz079
-                      or RoomName.Hcz096
-                      or RoomName.Hcz106
-                      or RoomName.Hcz939
-                      or RoomName.Lcz914
-                      or RoomName.HczTestroom;
+        public static bool IsScpRoom(this RoomName name) =>
+            name is RoomName.Lcz173
+                or RoomName.Lcz330
+                or RoomName.Hcz049
+                or RoomName.Hcz079
+                or RoomName.Hcz096
+                or RoomName.Hcz106
+                or RoomName.Hcz939
+                or RoomName.Lcz914
+                or RoomName.HczTestroom;
 
         /// <summary>
-        /// Checks if the designated <see cref="RoomName"/> structural context is classified as a high-security tactical weapons or munitions armory depot.
+        /// Returns true if the room is an armory.
         /// </summary>
-        /// <param name="roomName">The source <see cref="RoomName"/> enumeration literal target requested for evaluation.</param>
-        /// <returns><c>true</c> if the zone signature represents a facility armory vault; otherwise, <c>false</c>.</returns>
-        public static bool IsArmory(this RoomName roomName) =>
-            roomName is RoomName.LczArmory or RoomName.HczArmory;
+        public static bool IsArmory(this RoomName name) =>
+            name is RoomName.LczArmory or RoomName.HczArmory;
 
         #endregion
 
-        #region Spatial Validation
+        #region Generator Checks
 
         /// <summary>
-        /// Verifies defensively if the target <see cref="Room"/> spatial zone is completely free of any power generators that are currently in an active, fully engaged state.
+        /// Returns true if the room has no engaged generators.
         /// </summary>
-        /// <param name="room">The target <see cref="Room"/> grid instance verified for active generator properties.</param>
-        /// <returns><c>true</c> if the zone contains zero engaged power components or if no generators are registered inside the topology; otherwise, <c>false</c>.</returns>
         public static bool IsFreeOfEngagedGenerators(this Room room)
         {
             if (!Generator.TryGetFromRoom(room, out List<Generator> generators) || generators == null)
                 return true;
 
-            return !generators.Any(gen => gen.Engaged);
-        }
-
-        /// <summary>
-        /// Performs an aggregated spatial validation sweep across the target <see cref="Room"/> and all physically connected adjacent neighbor zones 
-        /// to confirm absolute grid isolation from any active, fully engaged power generators.
-        /// </summary>
-        /// <param name="room">The anchoring root <see cref="Room"/> layout node initiating the collective neighbor sweep routine.</param>
-        /// <returns><c>true</c> if the local node cluster is verified as completely clear of active operational generators; otherwise, <c>false</c>.</returns>
-        public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
-        {
-            if (room == null) return false;
-
-            // Single Source of Truth: Check self first. If failed, abort immediately.
-            if (!room.IsFreeOfEngagedGenerators()) return false;
-
-            // Check neighbors dynamically.
-            foreach (Room neighborRoom in room.GetNeighbors())
+            int count = generators.Count;
+            for (int i = 0; i < count; i++)
             {
-                if (!neighborRoom.IsFreeOfEngagedGenerators())
+                if (generators[i].Engaged)
                     return false;
             }
             return true;
         }
 
+        /// <summary>
+        /// Returns true if the room and all its neighbors have no engaged generators.
+        /// </summary>
+        public static bool IsRoomAndNeighborsFreeOfEngagedGenerators(this Room room)
+        {
+            if (room == null)
+                return false;
+
+            if (!room.IsFreeOfEngagedGenerators())
+                return false;
+
+            foreach (var neighbor in room.GetNeighbors())
+            {
+                if (!neighbor.IsFreeOfEngagedGenerators())
+                    return false;
+            }
+
+            return true;
+        }
+
         #endregion
 
-        #region Delegate Cascade Propagation
+        #region Elevator Checks
 
         /// <summary>
-        /// Executes a specified procedural action delegate graph across a localized room anchor point 
-        /// and seamlessly propagates the delegate pattern execution out into all adjacent physical room nodes safely.
+        /// Returns true if any elevator connected to the room is currently moving.
         /// </summary>
-        /// <param name="room">The structural core <see cref="Room"/> node serving as the root origin point for the iteration cascade.</param>
-        /// <param name="action">The modification action callback graph deployed sequentially against each room structure inside the tracking cluster bounds.</param>
+        public static bool IsElevatorActiveInRoom(this Room room)
+        {
+            if (room is null)
+                return false;
+
+            foreach (var elevator in Elevator.List)
+            {
+                if (elevator?.CurrentDestination?.Rooms?.Contains(room) == true &&
+                    elevator.CurrentSequence != Interactables.Interobjects.ElevatorChamber.ElevatorSequence.Ready)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Delegate Propagation
+
+        /// <summary>
+        /// Executes an action on the room and all its neighbors.
+        /// </summary>
         public static void ExecuteActionOnRoomAndNeighbors(this Room room, Action<Room> action)
         {
-            if (room == null || action == null) return;
+            if (room == null || action == null)
+                return;
 
             action(room);
 
-            foreach (Room neighborRoom in room.GetNeighbors())
-            {
-                action(neighborRoom);
-            }
+            foreach (var neighbor in room.GetNeighbors())
+                action(neighbor);
         }
 
         /// <summary>
-        /// Iterates over all door sub-components bound to the target room context to safely locate 
-        /// and fracture any breakable barriers (<see cref="BreakableDoor"/>) that remain intact.
+        /// Executes an action on all elevators connected to the room.
+        /// </summary>s
+        public static void HandleElevatorsForRoom(this Room room, float affectChance, Action<Elevator> action)
+        {
+            if (affectChance <= 0f || affectChance > 100f || action is null) return;
+
+            room.GetElevatorsConnectedToRoom()?.ForEach(e =>
+            {
+                if (SafeRandom.Range(0f, 100f) <= affectChance) action(e);
+            });
+        }
+
+        #endregion
+
+        #region Door Operations
+
+        /// <summary>
+        /// Breaks all breakable doors in the room.
         /// </summary>
-        /// <param name="room">The source <see cref="Room"/> architectural node whose interior doors are targeted for destruction.</param>
         public static void BreakAllDoors(this Room room)
         {
-            if (room?.Doors == null) return;
-
-            foreach (var door in room.Doors)
+            room?.Doors?.ForEach(d =>
             {
-                if (door is BreakableDoor breakable)
-                {
-                    if (!breakable.IsBroken)
-                    {
-                        breakable.TryBreak();
-                    }
-                }
-            }
+                if (d is BreakableDoor b && !b.IsBroken)
+                    b.TryBreak();
+            });
         }
 
         #endregion
 
-        #region Lighting Overrides
+        #region Lighting (Single Room)
 
         /// <summary>
-        /// Forcibly suppresses the active illumination controllers across the specified room topology for a precise timeframe.
+        /// Turns off lights in the room for a given duration.
         /// </summary>
-        /// <param name="room">The target <see cref="Room"/> spatial context where the environmental illumination override is executed.</param>
-        /// <param name="duration">The execution lifespan timeframe measured in seconds during which the light suppression grid remains active.</param>
         public static void TurnOffLights(this Room room, float duration)
-        {
-            if (room?.AllLightControllers == null) return;
+        => room?.AllLightControllers?.ForEach(lc => lc.FlickerLights(duration));
 
-            foreach (var controller in room.AllLightControllers)
-            {
-                controller.FlickerLights(duration);
-            }
-        }
 
         /// <summary>
-        /// Restores electrical power to the room's lighting grid controllers and optionally triggers a brief flicker sequence.
+        /// Turns on lights in the room and optionally flickers them.
         /// </summary>
-        /// <param name="room">The target room architecture instance undergoing illumination restoration.</param>
-        /// <param name="flickerDuration">The optional temporal flicker sequence window in seconds (assign 0s for immediate baseline initialization).</param>
         public static void TurnOnLights(this Room room, float flickerDuration = 0f)
-        {
-            if (room?.AllLightControllers is null) return;
-
-            foreach (var controller in room.AllLightControllers)
-            {
-                controller.LightsEnabled = true;
-                if (flickerDuration > 0f)
-                {
-                    controller.FlickerLights(flickerDuration);
-                }
-            }
-        }
+            => room?.AllLightControllers?.ForEach(c => c.FlickerLights(flickerDuration));
 
         /// <summary>
-        /// Forcibly suppresses illumination across this room and all physically connected adjacent neighboring rooms simultaneously.
-        /// Fully DRY implementation utilizing centralized action propagation cascades.
+        /// Turns off lights in the room and its neighbors.
         /// </summary>
-        /// <param name="room">The root room anchor node executing the multi-sector blackout cascade.</param>
-        /// <param name="duration">The operational execution lifespan measured in seconds during which the light grids stay unpowered.</param>
-        /// <param name="forced">A defensive safety toggle bypass flag to force processing overrides regardless of structural sub-states.</param>
-        public static void TurnOffRoomAndNeighborLights(this Room room, float duration, bool forced = false)
-        {
-            // DRY: We reuse our existing propagation delegate!
-            room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOffLights(duration));
-        }
+        public static void TurnOffRoomAndNeighborLights(this Room room, float duration)
+            => room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOffLights(duration));
 
         /// <summary>
-        /// Restores active electrical power and forces an optional brief flickering update sequence across this room and all adjacent neighbors.
-        /// Fully DRY implementation utilizing centralized action propagation cascades.
+        /// Turns on lights in the room and its neighbors.
         /// </summary>
-        /// <param name="room">The root room anchor node executing the cluster grid illumination restoration.</param>
-        /// <param name="duration">The optional temporal flicker sequence window in seconds (assign 0s for immediate baseline initialization).</param>
         public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f)
-        {
-            // DRY: We reuse our existing propagation delegate!
-            room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOnLights(duration));
-        }
+            => room.ExecuteActionOnRoomAndNeighbors(r => r.TurnOnLights(duration));
 
         /// <summary>
-        /// Fluently overrides the active rendering illumination color spectrum channel variables for a specific room.
+        /// Sets the light color for the room.
         /// </summary>
-        /// <param name="room">The target room architecture instance undergoing visual state modifications.</param>
-        /// <param name="color">The target <see cref="Color"/> layout spectrum applied to the room lighting controllers.</param>
         public static void SetLightsColor(this Room room, Color color)
         {
-            if (room?.LightController is not null)
-            {
+            if (room?.LightController != null)
                 room.LightController.OverrideLightsColor = color;
-            }
         }
 
         #endregion
 
-        #region Batch Collection Operations (Zero-Allocation High-Performance Overloads)
+        #region Lighting (Batch Operations)
 
         /// <summary>
-        /// Systematically executes a batch color spectrum override sweep across an aggregated collection sequence of rooms.
+        /// Sets light color for multiple rooms.
         /// </summary>
         public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
-        {
-            if (rooms is null) return;
-
-            if (rooms is List<Room> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++) concreteList[i]?.SetLightsColor(color);
-                return;
-            }
-
-            foreach (Room room in rooms) room?.SetLightsColor(color);
-        }
+        => rooms.ForEach(r => r?.SetLightsColor(color));
 
         /// <summary>
-        /// Systematically executes a batch color spectrum override sweep across an inline array of rooms.
+        /// Sets light color for multiple rooms (params).
         /// </summary>
         public static void SetLightsColor(Color color, params Room[] rooms)
-        {
-            if (rooms is null) return;
-
-            int count = rooms.Length;
-            for (int i = 0; i < count; i++) rooms[i]?.SetLightsColor(color);
-        }
+        => ((IEnumerable<Room>)rooms).SetLightsColor(color);
 
         /// <summary>
-        /// Systematically suppresses illumination across an aggregated collection sequence of rooms.
+        /// Turns off lights for multiple rooms.
         /// </summary>
         public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
-        {
-            if (rooms is null) return;
-
-            if (rooms is List<Room> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++) concreteList[i]?.TurnOffLights(duration);
-                return;
-            }
-
-            foreach (Room room in rooms) room?.TurnOffLights(duration);
-        }
+        => rooms.ForEach(r => r?.TurnOffLights(duration));
 
         /// <summary>
-        /// Systematically suppresses illumination across an inline array of rooms.
+        /// Turns off lights for multiple rooms (params).
         /// </summary>
         public static void TurnOffLights(float duration, params Room[] rooms)
-        {
-            if (rooms is null) return;
-
-            int count = rooms.Length;
-            for (int i = 0; i < count; i++) rooms[i]?.TurnOffLights(duration);
-        }
+        => ((IEnumerable<Room>)rooms).TurnOffLights(duration);
 
         /// <summary>
-        /// Systematically restores electrical power and optionally triggers a brief flicker sequence across a collection of rooms.
+        /// Turns on lights for multiple rooms.
         /// </summary>
         public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
-        {
-            if (rooms is null) return;
-
-            if (rooms is List<Room> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++) concreteList[i]?.TurnOnLights(flickerDuration);
-                return;
-            }
-
-            foreach (Room room in rooms) room?.TurnOnLights(flickerDuration);
-        }
+        => rooms.ForEach(r => r?.TurnOnLights(flickerDuration));
 
         /// <summary>
-        /// Systematically restores electrical power and optionally triggers a brief flicker sequence across an inline array of rooms.
+        /// Turns on lights for multiple rooms (params).
         /// </summary>
         public static void TurnOnLights(float flickerDuration, params Room[] rooms)
-        {
-            if (rooms is null) return;
-
-            int count = rooms.Length;
-            for (int i = 0; i < count; i++) rooms[i]?.TurnOnLights(flickerDuration);
-        }
+        => ((IEnumerable<Room>)rooms).TurnOnLights(flickerDuration);
 
         /// <summary>
-        /// Iterates over all door sub-components bound to the target room collection to safely locate and fracture any breakable barriers.
+        /// Breaks all breakable doors in multiple rooms.
         /// </summary>
         public static void BreakAllDoors(this IEnumerable<Room> rooms)
-        {
-            if (rooms is null) return;
-
-            if (rooms is List<Room> concreteList)
-            {
-                int count = concreteList.Count;
-                for (int i = 0; i < count; i++) concreteList[i]?.BreakAllDoors();
-                return;
-            }
-
-            foreach (Room room in rooms) room?.BreakAllDoors();
-        }
+        => rooms.ForEach(r => r?.BreakAllDoors());
 
         /// <summary>
-        /// Iterates over all door sub-components bound to the target room inline array to safely locate and fracture any breakable barriers.
+        /// Breaks all breakable doors in multiple rooms (params).
         /// </summary>
         public static void BreakAllDoors(params Room[] rooms)
-        {
-            if (rooms is null) return;
-
-            int count = rooms.Length;
-            for (int i = 0; i < count; i++) rooms[i]?.BreakAllDoors();
-        }
+        => ((IEnumerable<Room>)rooms).BreakAllDoors();
 
         #endregion
 
-        #region Vector Spatial Intersections
+        #region Spatial Helpers
 
         /// <summary>
-        /// Extension method on <see cref="Vector3"/> to seamlessly resolve and fetch the live <see cref="Room"/> instance 
-        /// encompassing the targeted coordinates layer directly from the underlying map topology grid.
+        /// Returns the room at the given world position.
         /// </summary>
-        /// <param name="position">The source <see cref="Vector3"/> coordinates sequence queried within the active workspace simulation.</param>
-        /// <returns>The concrete structural <see cref="Room"/> asset containing the vector position; otherwise, <see langword="null"/>.</returns>
         public static Room GetRoom(this Vector3 position)
-        {
-            return Room.GetRoomAtPosition(position);
-        }
+            => Room.GetRoomAtPosition(position);
 
         /// <summary>
-        /// Computes the precise linear Euclidean distance between the structural transform center position of the room asset 
-        /// and a targeted raw 3D position vector coordinate.
+        /// Returns the distance from the room center to the given position.
         /// </summary>
-        /// <param name="room">The source <see cref="Room"/> instance serving as the origin coordinate spatial anchor.</param>
-        /// <param name="position">The target destination <see cref="Vector3"/> spatial position checked against the room center.</param>
-        /// <returns>A single-precision floating-point scalar value indicating the physical displacement distance in meters.</returns>
         public static float GetDistanceTo(this Room room, Vector3 position)
         {
             if (room?.Base == null)
-            {
                 return 0f;
-            }
 
             return Vector3.Distance(room.Position, position);
         }
 
         /// <summary>
-        /// Performs a high-performance proximity validation query tracking from the room's transform center point 
-        /// utilizing underlying Unity vector squaring math (<c>sqrMagnitude</c>) to avoid high overhead calculation paths.
+        /// Returns true if the position is within the given radius from the room center.
         /// </summary>
-        /// <param name="room">The source <see cref="Room"/> instance serving as the origin coordinate spatial anchor.</param>
-        /// <param name="position">The target destination <see cref="Vector3"/> coordinates evaluated for boundary intersections.</param>
-        /// <param name="radiusSize">The maximum range limitation value constraint in meters allowed for positive validation.</param>
-        /// <returns><c>true</c> if the target coordinates reside inside the computed room radial envelope boundary; otherwise, <c>false</c>.</returns>
-        public static bool IsWithinRadius(this Room room, Vector3 position, float radiusSize)
+        public static bool IsWithinRadius(this Room room, Vector3 position, float radius)
         {
             if (room?.Base == null)
-            {
                 return false;
-            }
 
-            float sqrDistance = (room.Position - position).sqrMagnitude;
-            return sqrDistance <= (radiusSize * radiusSize);
+            float sqr = (room.Position - position).sqrMagnitude;
+            return sqr <= radius * radius;
         }
 
         #endregion
 
-        #region Lighting Flicker Matrix (Animation Pipelines)
+        #region Flicker Animations
 
         /// <summary>
-        /// Fluently executes a synchronized asynchronous lighting flicker animation loop over an individual <see cref="Room"/> instance.
+        /// Executes a flicker animation on the room lights.
         /// </summary>
-        /// <param name="room">The target room instance undergoing the visual flicker loop sequence.</param>
-        /// <param name="color">The target rendering illumination <see cref="Color"/> applied to the light nodes.</param>
-        /// <param name="duration">The absolute total timeline duration track in seconds assigned for the animation execution layout.</param>
-        /// <param name="frequency">The frequency coefficient tracking how many strobe status shifts execute per second.</param>
         public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
         {
-            if (room?.AllLightControllers == null) yield break;
+            if (room?.AllLightControllers is null)
+                yield break;
 
             float interval = 1f / frequency.LimitMin(0.1f);
-            int flickers = (int)Math.Round(duration / interval);
+            float half = interval * 0.5f;
+            int flickers = (int)(duration / interval);
 
             room.SetLightsColor(color);
 
-            // Performance Optimization: Cache IEnumerable to array ONCE before entering the time-critical loop
-            var controllers = Enumerable.ToArray(room.AllLightControllers); // TODO: Change to is List<LightController> Loop
-            int controllerCount = controllers.Length;
+            var controllers = room.AllLightControllers is List<LightsController> list
+                ? list.ToArray()
+                : new List<LightsController>(room.AllLightControllers).ToArray();
+
+            int count = controllers.Length;
 
             for (int i = 0; i < flickers; i++)
             {
-                room.TurnOnLights();
+                for (int c = 0; c < count; c++)
+                    controllers[c].LightsEnabled = false;
 
-                for (int c = 0; c < controllerCount; c++)
-                {
-                    if (controllers[c] != null)
-                    {
-                        controllers[c].LightsEnabled = false;
-                    }
-                }
-                yield return Timing.WaitForSeconds(interval * 0.5f);
+                yield return Timing.WaitForSeconds(half);
 
-                for (int c = 0; c < controllerCount; c++)
-                {
-                    if (controllers[c] != null)
-                    {
-                        controllers[c].LightsEnabled = true;
-                    }
-                }
-                yield return Timing.WaitForSeconds(interval * 0.5f);
+                for (int c = 0; c < count; c++)
+                    controllers[c].LightsEnabled = true;
+
+                yield return Timing.WaitForSeconds(half);
             }
+
             room.SetLightsColor(Color.clear);
-        }
-
-        /// <summary>
-        /// Fluently executes a global or batch collection wide lighting flicker animation loop sequence spanning multiple rooms simultaneously.
-        /// </summary>
-        /// <param name="rooms">The enumerable stream collection tracking targeted room assets loaded inside server memory channels.</param>
-        /// <param name="color">The target rendering illumination <see cref="Color"/> matrix applied to the cluster layouts.</param>
-        /// <param name="duration">The absolute execution timeline width evaluated in fractional seconds.</param>
-        /// <param name="frequency">The frequency parameter enforcing execution cycle counts per second across the collection elements.</param>
-        public static IEnumerator<float> FlickerBulkLightsCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
-        {
-            if (rooms is null) yield break;
-
-            float interval = 1f / frequency.LimitMin(0.1f);
-            int flickers = (int)Math.Round(duration / interval);
-
-            // Allocation Optimization: Multi-dimensional flattening via single-pass caching
-            var validRooms = new List<Room>();
-            var controllersMatrix = new List<LightsController[]>(); // Holds pre-resolved arrays per room
-
-            foreach (Room room in rooms)
-            {
-                if (room?.AllLightControllers != null)
-                {
-                    validRooms.Add(room);
-                    room.SetLightsColor(color);
-                    controllersMatrix.Add(Enumerable.ToArray(room.AllLightControllers));
-                }
-            }
-
-            int roomCount = validRooms.Count;
-
-            for (int i = 0; i < flickers; i++)
-            {
-                // Bulk suppression phase sweep execution paths (Zero-allocation inner loops)
-                for (int r = 0; r < roomCount; r++)
-                {
-                    var controllers = controllersMatrix[r];
-                    int controllerCount = controllers.Length;
-                    for (int c = 0; c < controllerCount; c++)
-                    {
-                        if (controllers[c] != null) controllers[c].LightsEnabled = false;
-                    }
-                }
-                yield return Timing.WaitForSeconds(interval * 0.5f);
-
-                // Bulk restoration phase sweep execution paths (Zero-allocation inner loops)
-                for (int r = 0; r < roomCount; r++)
-                {
-                    var controllers = controllersMatrix[r];
-                    int controllerCount = controllers.Length;
-                    for (int c = 0; c < controllerCount; c++)
-                    {
-                        if (controllers[c] != null) controllers[c].LightsEnabled = true;
-                    }
-                }
-                yield return Timing.WaitForSeconds(interval * 0.5f);
-            }
-
-            for (int r = 0; r < roomCount; r++)
-            {
-                validRooms[r].SetLightsColor(Color.clear);
-            }
         }
 
         #endregion

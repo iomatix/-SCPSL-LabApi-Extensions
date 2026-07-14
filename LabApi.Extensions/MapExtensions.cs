@@ -3,86 +3,64 @@
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides global enterprise-grade abstraction layers for macro infrastructure mutation, 
-    /// facility-wide door structural degradation, and centralized lighting grid overrides.
+    /// Utility extensions for global facility operations: doors, lights and generators.
     /// </summary>
     public static class MapExtensions
     {
+        #region Doors
+
         /// <summary>
-        /// Performs a comprehensive, high-performance iteration sweep across all active rooms to forcibly 
-        /// shatter and destroy every structural <see cref="BreakableDoor"/> instance that is not currently broken.
+        /// Breaks all breakable doors in the entire facility.
         /// </summary>
         public static void BreakAllFacilityDoors()
-        {
-            foreach (Room room in Room.List)
-            {
-                if (room == null) continue;
+            => Room.List?.ForEach(r => r?.BreakAllDoors());
 
-                room.BreakAllDoors();
-            }
-        }
+        #endregion
+
+        #region Lights
 
         /// <summary>
-        /// Global shortcut matrix to instantly toggle the active illumination status field of every 
-        /// light controller component deployed across the entire facility map topology.
+        /// Enables or disables all lights in the facility.
         /// </summary>
-        /// <param name="enabled">The target state value where <c>true</c> restores standard grid power and <c>false</c> triggers total facility blackout.</param>
         public static void SetAllLightsEnabled(bool enabled)
-        {
-            foreach (Room room in Room.List)
-            {
-                if (room?.AllLightControllers == null) continue;
+            => Room.List?.ForEach(room =>
+                room?.AllLightControllers?.ForEach(c => c.LightsEnabled = enabled));
 
-                foreach (var lightController in room.AllLightControllers)
-                {
-                    if (lightController != null)
-                    {
-                        lightController.LightsEnabled = enabled;
-                    }
-                }
-            }
-        }
+        #endregion
+
+        #region Generators
 
         /// <summary>
-        /// Computes the exact real-time operational volume load metrics of facility power generators currently sitting in a fully engaged state.
+        /// Returns the number of engaged generators.
         /// </summary>
-        /// <returns>An integer scalar value indicating the total volume of active, fully engaged generator nodes across the facility floor grid.</returns>
         public static int GetEngagedGeneratorsCount()
         {
             int count = 0;
+
             foreach (var generator in Generator.List)
             {
                 if (generator != null && generator.Engaged)
-                {
                     count++;
-                }
             }
+
             return count;
         }
 
         /// <summary>
-        /// Evaluates with zero heap allocations whether all currently deployed power generator sub-units are fully engaged, 
-        /// verifying metrics against a minimum structural compliance count.
+        /// Returns true if all generators are engaged and the count meets the required minimum.
         /// </summary>
-        /// <param name="minimumRequiredCount">The baseline count of generator assets that must exist and be validated as engaged.</param>
-        /// <returns><c>true</c> if the total engaged generator volume meets or exceeds the required count and no unengaged units are found; otherwise, <c>false</c>.</returns>
         public static bool AreAllGeneratorsEngaged(int minimumRequiredCount = 3)
         {
             var generators = Generator.List;
-            if (generators == null) return false;
+            if (generators is null)
+                return false;
 
-            int count = 0;
-            foreach (var gen in generators)
-            {
-                // Short-circuit: If any generator is unengaged, we fail immediately without completing the loop
-                if (gen == null || !gen.Engaged)
-                {
-                    return false;
-                }
-                count++;
-            }
+            int engaged = GetEngagedGeneratorsCount();
+            int total = generators.Count;
 
-            return count >= minimumRequiredCount;
+            return engaged == total && engaged >= minimumRequiredCount;
         }
+
+        #endregion
     }
 }

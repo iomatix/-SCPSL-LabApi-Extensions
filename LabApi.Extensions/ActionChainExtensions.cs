@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Core data token representation of a sequence node inside a fluent action orchestration pipeline.
+    /// Represents a single step in an action chain: either a callback or a delay.
     /// </summary>
     internal struct ChainNode<T>
     {
@@ -30,7 +30,7 @@ namespace LabApi.Extensions
     }
 
     /// <summary>
-    /// A high-performance fluent orchestration builder designed to execute chained asynchronous actions with precise delay thresholds.
+    /// Builds and runs a sequence of actions with optional delays.
     /// </summary>
     public sealed class ActionChain<T> where T : class
     {
@@ -43,39 +43,39 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Enqueues an instantaneous execution step into the action chain pipeline.
+        /// Adds an action to run immediately.
         /// </summary>
         public ActionChain<T> Then(Action<T> action)
         {
-            if (action is null) throw new ArgumentNullException(nameof(action));
+            if (action is null)
+                throw new ArgumentNullException(nameof(action));
+
             _nodes.Add(new ChainNode<T>(action));
             return this;
         }
 
         /// <summary>
-        /// Enqueues a temporal delay standby constraint into the action chain pipeline.
+        /// Adds a delay before the next action.
         /// </summary>
         public ActionChain<T> Wait(float seconds)
         {
             if (seconds > 0f)
-            {
                 _nodes.Add(new ChainNode<T>(seconds));
-            }
+
             return this;
         }
 
         /// <summary>
-        /// Launches the compiled action execution chain sequence as a non-blocking asynchronous coroutine stream.
+        /// Starts executing the chain as a coroutine.
         /// </summary>
-        /// <param name="coroutineTag">An optional string tracking tag identifier used to handle premature eviction.</param>
-        /// <returns>A live handle tracking the background execution routine thread.</returns>
+        /// <param name="coroutineTag">Optional tag for managing the coroutine.</param>
         public CoroutineHandle Run(string coroutineTag = null)
         {
-            CoroutineHandle handle = Timing.RunCoroutine(ExecutePipelineRoutine());
+            var handle = Timing.RunCoroutine(ExecutePipelineRoutine());
+
             if (!string.IsNullOrEmpty(coroutineTag))
-            {
                 handle.Tag = coroutineTag;
-            }
+
             return handle;
         }
 
@@ -83,9 +83,12 @@ namespace LabApi.Extensions
         {
             foreach (var node in _nodes)
             {
-                // Defensive Reference Check: Instantly aborts the execution tree if the target object is evicted from memory mid-chain
-                if (_target is Player player && !player.IsReady) yield break;
-                if (_target is null) yield break;
+                // Stop if the target is no longer valid.
+                if (_target is Player p && !p.IsReady)
+                    yield break;
+
+                if (_target is null)
+                    yield break;
 
                 if (node.IsDelay)
                 {
@@ -100,16 +103,11 @@ namespace LabApi.Extensions
     }
 
     /// <summary>
-    /// Companion factory extensions bringing the fluent <see cref="ActionChain{T}"/> initialization into global target scope.
+    /// Creates a new action chain for the target.
     /// </summary>
     public static class ActionChainExtensions
     {
-        /// <summary>
-        /// Initiates a clean, type-safe, fluent action orchestration chain bound to this target instance context.
-        /// </summary>
         public static ActionChain<T> CreateChain<T>(this T target) where T : class
-        {
-            return new ActionChain<T>(target);
-        }
+            => new ActionChain<T>(target);
     }
 }

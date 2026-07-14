@@ -5,20 +5,17 @@ using System.IO;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides high-performance fluent utility extensions for filesystem interactions, 
-    /// directory migrations, and OS-level platform attribute audits.
+    /// Simple helpers for filesystem checks and file copying.
     /// </summary>
     public static class IoExtensions
     {
         /// <summary>
-        /// Evaluates defensively whether the targeted path configuration behaves structurally 
-        /// as an OS reparse point (Virtual Junction, Symlink, or Hardlink partition).
+        /// Returns true if the path exists and is a reparse point (symlink, junction, etc.).
         /// </summary>
-        /// <param name="path">The target filesystem path literal to analyze.</param>
-        /// <returns><c>true</c> if the path exists and contains the active reparse point attribute flag; otherwise, <c>false</c>.</returns>
         public static bool IsReparsePoint(this string path)
         {
-            if (string.IsNullOrEmpty(path) || (!Directory.Exists(path) && !File.Exists(path)))
+            if (string.IsNullOrEmpty(path) ||
+                (!Directory.Exists(path) && !File.Exists(path)))
             {
                 return false;
             }
@@ -29,48 +26,54 @@ namespace LabApi.Extensions
             }
             catch
             {
-                return false; // Suppress IO exceptions during background file audits gracefully
+                // Ignore IO exceptions (locked files, missing permissions, etc.)
+                return false;
             }
         }
 
         /// <summary>
-        /// Iterates over the source directory to discover and mirror file assets into a destination folder boundary 
-        /// utilizing a concrete structural search query pattern filter.
+        /// Copies files from one directory to another using a search pattern.
+        /// Creates the destination directory if needed.
         /// </summary>
-        /// <param name="sourceDirectory">The originating root folder path anchoring the migration layout.</param>
-        /// <param name="destinationDirectory">The targeted destination folder path layout receiving the mirrored file stream.</param>
-        /// <param name="searchPattern">The search criteria pattern filtering file collection lookups (e.g. "*.yml", "*.json"). Defaults to "*.*".</param>
-        /// <param name="overwrite">If set to <c>true</c>, forcibly overwrites pre-existing assets discovered inside the destination cluster.</param>
-        public static void CopyFilesTo(this string sourceDirectory, string destinationDirectory, string searchPattern = "*.*", bool overwrite = true)
+        /// <param name="sourceDirectory">Folder to copy files from.</param>
+        /// <param name="destinationDirectory">Folder to copy files into.</param>
+        /// <param name="searchPattern">File filter (e.g. "*.json"). Defaults to "*.*".</param>
+        /// <param name="overwrite">If true, replaces existing files.</param>
+        public static void CopyFilesTo(
+            this string sourceDirectory,
+            string destinationDirectory,
+            string searchPattern = "*.*",
+            bool overwrite = true)
         {
-            if (string.IsNullOrEmpty(sourceDirectory) || string.IsNullOrEmpty(destinationDirectory)) return;
-            if (!Directory.Exists(sourceDirectory)) return;
+            if (string.IsNullOrEmpty(sourceDirectory) ||
+                string.IsNullOrEmpty(destinationDirectory))
+                return;
+
+            if (!Directory.Exists(sourceDirectory))
+                return;
 
             if (!Directory.Exists(destinationDirectory))
-            {
                 Directory.CreateDirectory(destinationDirectory);
-            }
 
             try
             {
-                string[] discoveredFiles = Directory.GetFiles(sourceDirectory, searchPattern);
-                int count = discoveredFiles.Length;
+                var files = Directory.GetFiles(sourceDirectory, searchPattern);
+                int count = files.Length;
 
                 for (int i = 0; i < count; i++)
                 {
-                    string sourceFilePath = discoveredFiles[i];
-                    string fileName = Path.GetFileName(sourceFilePath);
-                    string destinationFilePath = Path.Combine(destinationDirectory, fileName);
+                    string src = files[i];
+                    string name = Path.GetFileName(src);
+                    string dst = Path.Combine(destinationDirectory, name);
 
-                    if (overwrite || !File.Exists(destinationFilePath))
-                    {
-                        File.Copy(sourceFilePath, destinationFilePath, overwrite);
-                    }
+                    if (overwrite || !File.Exists(dst))
+                        File.Copy(src, dst, overwrite);
                 }
             }
             catch (Exception ex)
             {
-                iLogger.Error("IoExtensions.CopyFilesTo", $"Bulk file migration collapsed under pattern [{searchPattern}]: {ex.Message}");
+                iLogger.Error("IoExtensions.CopyFilesTo",
+                    $"File copy failed for pattern '{searchPattern}': {ex.Message}");
             }
         }
     }

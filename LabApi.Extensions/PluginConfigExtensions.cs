@@ -6,20 +6,20 @@ using System;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Provides advanced high-performance utility extensions for LabAPI plugin lifecycle and modular sub-configuration deployment.
+    /// Helpers for loading and validating plugin sub‑config files.
     /// </summary>
     public static class PluginConfigExtensions
     {
         /// <summary>
-        /// Atomically loads a decentralized sub-configuration file from the filesystem. 
-        /// Automatically deploys a clean fallback instance, executes validation delegates, and flushes changes to disk if missing or corrupt.
+        /// Loads a sub‑config file or creates a new one if missing or invalid.
+        /// Runs optional validation and saves the result back to disk.
         /// </summary>
-        /// <typeparam name="TMainConfig">The core configuration type binding the primary plugin layout framework inheriting from <see cref="LabApiConfig"/>.</typeparam>
-        /// <typeparam name="TSubConfig">The target modular sub-configuration class layer being initialized.</typeparam>
-        /// <param name="plugin">The live executing framework plugin instance context.</param>
-        /// <param name="fileName">The target file name literal tracking the resource on disk (e.g., "settings.yml").</param>
-        /// <param name="validationAction">An optional custom validation delegate executed seamlessly to enforce runtime metric limits.</param>
-        /// <returns>The fully initialized, validated strongly-typed <typeparamref name="TSubConfig"/> instance asset.</returns>
+        /// <typeparam name="TMainConfig">Main plugin config type.</typeparam>
+        /// <typeparam name="TSubConfig">Sub‑config type to load.</typeparam>
+        /// <param name="plugin">Plugin instance.</param>
+        /// <param name="fileName">File name on disk (e.g. "settings.yml").</param>
+        /// <param name="validationAction">Optional validation callback.</param>
+        /// <returns>Loaded or newly created sub‑config instance.</returns>
         public static TSubConfig LoadOrCreateSubConfig<TMainConfig, TSubConfig>(
             this Plugin<TMainConfig> plugin,
             string fileName,
@@ -28,25 +28,17 @@ namespace LabApi.Extensions
             where TSubConfig : class, new()
         {
             if (plugin is null || string.IsNullOrEmpty(fileName))
-            {
                 return new TSubConfig();
-            }
 
             TSubConfig finalConfig;
 
-            if (plugin.TryLoadConfig(fileName, out TSubConfig loadedConfig))
-            {
-                finalConfig = loadedConfig ?? new TSubConfig();
-            }
+            if (plugin.TryLoadConfig(fileName, out TSubConfig loaded))
+                finalConfig = loaded ?? new TSubConfig();
             else
-            {
                 finalConfig = new TSubConfig();
-            }
 
-            // Fire custom validation constraints if attached by the developer
             validationAction?.Invoke(finalConfig);
 
-            // Instantly sync filesystem state mirror to preserve formatting integrity
             plugin.TrySaveConfig(finalConfig, fileName);
 
             return finalConfig;

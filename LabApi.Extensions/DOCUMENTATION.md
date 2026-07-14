@@ -385,73 +385,49 @@ public static void TurnOnLights(params Elevator[] elevators)
 ### 🔹 `GetElevator()`
 **Description:** Resolves the high-level <see cref="Elevator"/> wrapper associated with this specific door instance. Supports both wrapper casting and direct native component resolution fallbacks.
 ```csharp
-public static Elevator GetElevator(this Door door)
+public static Elevator GetElevator(this Door door) // TODO: SHOULD BE IN DoorExtensions
 ```
 
 ### 🔹 `GetElevators()`
 **Description:** Gets all active elevators associated with the specified facility zone destination.
 ```csharp
-public static IEnumerable<Elevator> GetElevators(this FacilityZone zone)
+public static IEnumerable<Elevator> GetElevators(this FacilityZone zone) // TODO: SHOULD BE IN FacilityZoneExtensions
 ```
 
 ### 🔹 `GetElevatorsInZone()`
 **Description:** Retrieves a filtered sequence of active elevator modules whose current destination grids map directly to a target facility zone boundary.
 ```csharp
-public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zone.GetElevators();
-```
-
-### 🔹 `GetElevatorsConnectedToRoom()`
-**Description:** Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room.
-```csharp
-public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room)
+public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zone.GetElevators(); // TODO: SHOULD BE IN FacilityZoneExtensions /// <summary> /// Isolates and filters the global elevator tracking arrays to return only the specific units structurally bridging into the target room. /// </summary> /// <param name="room">The anchoring <see cref="Room"/> instance tracking local destination mappings.</param> /// <returns>An enumerable sequence tracking matching elevator units linked directly to the specified layout node mapping.</returns> public static IEnumerable<Elevator> GetElevatorsConnectedToRoom(this Room room) // TODO: SHOULD BE IN RoomExtensions { if (room is null) yield break;
 ```
 
 ### 🔹 `IsElevatorAtDoorLevel()`
 **Description:** Verifies whether the associated elevator cabin is currently physically aligned with this specific door's vertical deck level. Used comprehensively across door interaction layers to prevent void access exploits.
 ```csharp
-public static bool IsElevatorAtDoorLevel(this Door door)
+public static bool IsElevatorAtDoorLevel(this Door door) // TODO: SHOULD BE IN DoorExtensions
 ```
 
 ### 🔹 `IsActiveInRoom()`
 **Description:** Evaluates whether any elevator infrastructure bound to the specified room is actively executing a mechanical movement sequence.
 ```csharp
-public static bool IsActiveInRoom(this Room room)
+public static bool IsActiveInRoom(this Room room) // TODO: SHOULD BE IN RoomExtensions
 ```
 
 ### 🔹 `IsInExecutiveElevator()`
 **Description:** Evaluates if an active player's spatial coordinates currently overlap an operational elevator cabin mapped to executive or facility transitional sectors.
 ```csharp
-public static bool IsInExecutiveElevator(this Player player)
+public static bool IsInExecutiveElevator(this Player player) // TODO: SHOULD BE IN PlayerExtensions
 ```
 
 ### 🔹 `LockElevators()`
 **Description:** Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone.
 ```csharp
-public static void LockElevators(this FacilityZone zone)
+public static void LockElevators(this FacilityZone zone) // TODO: SHOULD BE IN FacilityZoneExtensions
 ```
 
 ### 🔹 `LockElevatorsInZone()`
 **Description:** Enforces absolute structural lockdowns on all elevator bulkhead vectors tracking within the requested facility zone. Retained for backward compatibility.
 ```csharp
-public static void LockElevatorsInZone(FacilityZone zone) => zone.LockElevators();
-```
-
-### 🔹 `UnlockElevators()`
-**Description:** Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone.
-```csharp
-public static void UnlockElevators(this FacilityZone zone)
-```
-
-### 🔹 `UnlockElevatorsInZone()`
-**Description:** Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone. Retained for backward compatibility.
-```csharp
-public static void UnlockElevatorsInZone(FacilityZone zone) => zone.UnlockElevators();
-```
-
-### 🔹 `HandleElevatorsForRoom()`
-**Description:** Processes a localized, probability-driven evaluation sweep across all elevators bound to a room, safely routing matching units into an execution action graph.
-```csharp
-public static void HandleElevatorsForRoom(this Room room, float affectChance, float duration, Action<Elevator> elevatorAction)
+public static void LockElevatorsInZone(FacilityZone zone) => zone.LockElevators(); // TODO: SHOULD BE IN FacilityZoneExtensions /// <summary> /// Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone. /// </summary> /// <param name="zone">The targeting structural <see cref="FacilityZone"/> layout block assigned for operational recovery routines.</param> public static void UnlockElevators(this FacilityZone zone) { foreach (var elevator in zone.GetElevators()) elevator.UnlockAllDoors(); // TODO: SHOULD BE IN FacilityZoneExtensions } /// <summary> /// Restores normal passage access and lifts all operational bulkhead locking restrictions across elevator units within the specified zone. /// Retained for backward compatibility. /// </summary> public static void UnlockElevatorsInZone(FacilityZone zone) => zone.UnlockElevators(); // TODO: SHOULD BE IN FacilityZoneExtensions /// <summary> /// Processes a localized, probability-driven evaluation sweep across all elevators bound to a room, /// safely routing matching units into an execution action graph. /// </summary> /// <param name="room">The source <see cref="Room"/> context serving as the spatial matrix anchor for local connections.</param> /// <param name="affectChance">The fractional probability value constraint ceiling checked via thread-safe random state generators.</param> /// <param name="duration">The execution lifecycle tracking timeframe in seconds allocated for downstream manipulation routines.</param> /// <param name="elevatorAction">The specialized modification action callback graph deployed if probability check criteria are successfully met.</param> public static void HandleElevatorsForRoom(this Room room, float affectChance, float duration, Action<Elevator> elevatorAction) // TODO: SHOULD BE IN RoomExtensions { if (affectChance <= 0f || affectChance > 100f || elevatorAction == null) return;
 ```
 
 ---
@@ -569,13 +545,13 @@ public static bool HasAttachment(AttachmentName attachmentName, params FirearmIt
 ### 🔹 `RegisterAll()`
 **Description:** Systematically registers an aggregated inline array sequence of event handlers onto the central framework routing engine.
 ```csharp
-public static void RegisterAll(params CustomEventsHandler[] handlers)
+public static void RegisterAll(params CustomEventsHandler[] handlers) // TODO: IEnumerable + overload
 ```
 
 ### 🔹 `UnregisterAll()`
 **Description:** Systematically evicts and unregisters an aggregated inline array sequence of event handlers from the central framework routing engine.
 ```csharp
-public static void UnregisterAll(params CustomEventsHandler[] handlers)
+public static void UnregisterAll(params CustomEventsHandler[] handlers) // TODO: IEnumerable + overload
 ```
 
 ---
@@ -1227,33 +1203,21 @@ public static int ComputeLevenshteinDistance(this string source, string target)
 ## 📦 Class: TeslaExtensions
 
 ### 🔹 `DisableFor()`
-**Description:** Disables a single Tesla gate for a specified duration with an optional discharge trigger.
+**Description:** Disables a Tesla gate for a given duration. Optionally forces a discharge trigger.
 ```csharp
 public static void DisableFor(this Tesla tesla, float duration, bool forceTrigger = true)
 ```
 
 ### 🔹 `DisableFor()`
-**Description:** Disables a collection of Tesla gates for a specified duration with an optional discharge trigger.
+**Description:** Disables multiple Tesla gates for a given duration.
 ```csharp
 public static void DisableFor(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true)
 ```
 
 ### 🔹 `DisableFor()`
-**Description:** Disables an inline array of Tesla gates for a specified duration with an optional discharge trigger.
+**Description:** Disables multiple Tesla gates (params overload).
 ```csharp
 public static void DisableFor(float duration, bool forceTrigger, params Tesla[] teslas)
-```
-
-### 🔹 `SetInactiveTimeForAll()`
-**Description:** Sets the inactive cooldown time for a collection of Tesla gates.
-```csharp
-public static void SetInactiveTimeForAll(this IEnumerable<Tesla> teslas, float duration, bool forceTrigger = true) => teslas.DisableFor(duration, forceTrigger);
-```
-
-### 🔹 `Disable()`
-**Description:** Deactivates a collection of Tesla gates using a default shorthand configuration.
-```csharp
-public static void Disable(this IEnumerable<Tesla> teslas, float duration = 5.0f, bool forceTrigger = false) => teslas.DisableFor(duration, forceTrigger);
 ```
 
 ---
@@ -1347,63 +1311,75 @@ public static UnityEngine.Vector3 Sanitize(this UnityEngine.Vector3 vector, Unit
 ## 📦 Class: ZoneExtensions
 
 ### 🔹 `UnknownMember()`
-**Description:** Cached array containing all valid facility zone tokens to eliminate runtime enum allocation overhead.
+**Description:** Cached array of all facility zones (zero enum allocation).
 ```csharp
 public static readonly FacilityZone[] All = (FacilityZone[])Enum.GetValues(typeof(FacilityZone));
 ```
 
 ### 🔹 `GetDoors()`
-**Description:** Resolves and aggregates all <see cref="Door"/> instances deployed within the specified facility zone boundary.
+**Description:** Returns all doors located inside the specified zone.
 ```csharp
 public static IEnumerable<Door> GetDoors(this FacilityZone zone)
 ```
 
 ### 🔹 `OpenDoors()`
-**Description:** Forcibly unseals all doors located within the targeted facility zone boundary.
+**Description:** Opens all doors in the zone.
 ```csharp
-public static void OpenDoors(this FacilityZone zone, bool bypassLocks = false)
+public static void OpenDoors(this FacilityZone zone, bool bypassLocks = false) => zone.GetDoors().Open(bypassLocks);
 ```
 
 ### 🔹 `CloseDoors()`
-**Description:** Forcibly seals all doors located within the targeted facility zone boundary.
+**Description:** Closes all doors in the zone.
 ```csharp
-public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false)
+public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false) => zone.GetDoors().Close(bypassLocks);
 ```
 
 ### 🔹 `SetDoorsLockState()`
-**Description:** Updates the administrative lock state for all doors across an entire facility zone under a specific lock reason.
+**Description:** Sets the lock state for all doors in the zone.
 ```csharp
-public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true)
+public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true) => zone.GetDoors().SetLockState(reason, locked);
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Forcibly suppresses all layout light controllers and connected elevator cabins across an entire facility zone for a designated duration.
+**Description:** Turns off lights in the zone and its elevators for a given duration.
 ```csharp
 public static void TurnOffLights(this FacilityZone zone, float duration)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Instantly restores electrical power to all light controllers and connected elevator cabins across a specific facility zone.
+**Description:** Turns on lights in the zone and its elevators.
 ```csharp
 public static void TurnOnLights(this FacilityZone zone)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Forcibly suppresses illumination across a collection sequence of facility zones simultaneously.
+**Description:** Turns off lights across multiple zones.
 ```csharp
 public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
 ```
 
+### 🔹 `TurnOffLights()`
+**Description:** Turns off lights across multiple zones (params overload).
+```csharp
+public static void TurnOffLights(float duration, params FacilityZone[] zones) => ((IEnumerable<FacilityZone>)zones).TurnOffLights(duration);
+```
+
 ### 🔹 `TurnOnLights()`
-**Description:** Instantly restores operational grid power parameters across an entire collection sequence of facility zones.
+**Description:** Turns on lights across multiple zones.
 ```csharp
 public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
 ```
 
-### 🔹 `FlickerLightsCoroutine()`
-**Description:** Fluently executes a batch synchronized visual lighting flicker animation sequence across a concrete <see cref="FacilityZone"/>.
+### 🔹 `TurnOnLights()`
+**Description:** Turns on lights across multiple zones (params overload).
 ```csharp
-public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone targetZone, Color color, float duration, float frequency)
+public static void TurnOnLights(params FacilityZone[] zones) => ((IEnumerable<FacilityZone>)zones).TurnOnLights();
+```
+
+### 🔹 `FlickerLightsCoroutine()`
+**Description:** Performs a flicker animation on zone lights for a given duration.
+```csharp
+public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
 ```
 
 ---
