@@ -448,6 +448,12 @@ public static void DisableAllEffects(params Player[] players) => players.Disable
 
 ## 📦 Class: ElevatorExtensions
 
+### 🔹 `GetZone()`
+**Description:** Instantly resolves the target destination <see cref="FacilityZone"/> of this elevator sequence.
+```csharp
+public static FacilityZone GetZone(this Elevator elevator)
+```
+
 ### 🔹 `OpenActiveDoors()`
 **Description:** Opens only the doors located on the elevator's current floor.
 ```csharp
