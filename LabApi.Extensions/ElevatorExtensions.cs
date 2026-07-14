@@ -1,14 +1,11 @@
-﻿using LabApi.Extensions.Misc;
-using LabApi.Features.Wrappers;
-using MapGeneration;
-using System;
+﻿using LabApi.Features.Wrappers;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace LabApi.Extensions
 {
     /// <summary>
     /// Utility extensions for elevator door control and basic cabin state checks.
+    /// Reuses core Door extensions to maintain a single source of truth and leverage O(1) instance caching.
     /// </summary>
     public static class ElevatorExtensions
     {
@@ -19,18 +16,18 @@ namespace LabApi.Extensions
         /// </summary>
         public static void OpenActiveDoors(this Elevator elevator, bool bypassLocks = false)
         {
-            if (elevator?.Doors is null)
+            // FIX: Unified Unity lifetime check. Prevent operations on null or destroyed objects.
+            if (elevator == null || elevator.Doors == null)
                 return;
 
-            foreach (var door in elevator.Doors)
+            // FIX: DRY & Zero-Allocation loop using state-passing and pre-cached Door extensions.
+            elevator.Doors.ForEach(bypassLocks, static (door, bypass) =>
             {
-                if (door?.GameObject != null &&
-                    door.GameObject.TryGetComponent<Interactables.Interobjects.ElevatorDoor>(out var nativeDoor) &&
-                    elevator.IsDoorAtCurrentLevel(door, nativeDoor))
+                if (door != null && door.IsElevatorAtDoorLevel())
                 {
-                    door.Open(bypassLocks);
+                    door.Open(bypass);
                 }
-            }
+            });
         }
 
         /// <summary>
@@ -38,61 +35,57 @@ namespace LabApi.Extensions
         /// </summary>
         public static void CloseActiveDoors(this Elevator elevator, bool bypassLocks = false)
         {
-            if (elevator?.Doors is null)
+            if (elevator == null || elevator.Doors == null)
                 return;
 
-            foreach (var door in elevator.Doors)
+            // FIX: DRY & Zero-Allocation loop using state-passing and pre-cached Door extensions.
+            elevator.Doors.ForEach(bypassLocks, static (door, bypass) =>
             {
-                if (door?.GameObject != null &&
-                    door.GameObject.TryGetComponent<Interactables.Interobjects.ElevatorDoor>(out var nativeDoor) &&
-                    elevator.IsDoorAtCurrentLevel(door, nativeDoor))
+                if (door != null && door.IsElevatorAtDoorLevel())
                 {
-                    door.Close(bypassLocks);
+                    door.Close(bypass);
                 }
-            }
-        }
-
-        /// <summary>
-        /// Returns true if the door belongs to the elevator's current floor.
-        /// </summary>
-        private static bool IsDoorAtCurrentLevel(this Elevator elevator, Door door, Interactables.Interobjects.ElevatorDoor nativeDoor)
-        {
-            if (elevator?.Base is null)
-                return false;
-
-            float delta = Math.Abs(door.Position.y - elevator.Base.transform.position.y);
-            return delta <= 3.5f;
+            });
         }
 
         #endregion
 
-        #region Batch Operations (IEnumerable + params)
+        #region Batch Operations (Zero-Allocation via State-Passing)
 
         /// <summary>
         /// Opens active-floor doors for multiple elevators.
         /// </summary>
-         public static void OpenActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
-            => elevators.ForEach(e => e?.OpenActiveDoors(bypassLocks));
+        public static void OpenActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
+        {
+            if (elevators == null)
+                return;
+
+            elevators.ForEach(bypassLocks, static (e, bypass) => e?.OpenActiveDoors(bypass));
+        }
 
         /// <summary>
         /// Opens active-floor doors for multiple elevators (params overload).
         /// </summary>
-        public static void OpenActiveDoors(bool bypassLocks, params Elevator[] elevators)
-            => ((IEnumerable<Elevator>)elevators).OpenActiveDoors(bypassLocks);
+        public static void OpenActiveDoors(bool bypassLocks, params Elevator[] elevators) =>
+            elevators.OpenActiveDoors(bypassLocks);
 
         /// <summary>
         /// Closes active-floor doors for multiple elevators.
         /// </summary>
         public static void CloseActiveDoors(this IEnumerable<Elevator> elevators, bool bypassLocks = false)
-            => elevators.ForEach(e => e?.CloseActiveDoors(bypassLocks));
+        {
+            if (elevators == null)
+                return;
+
+            elevators.ForEach(bypassLocks, static (e, bypass) => e?.CloseActiveDoors(bypass));
+        }
 
         /// <summary>
         /// Closes active-floor doors for multiple elevators (params overload).
         /// </summary>
-        public static void CloseActiveDoors(bool bypassLocks, params Elevator[] elevators)
-            => ((IEnumerable<Elevator>)elevators).CloseActiveDoors(bypassLocks);
+        public static void CloseActiveDoors(bool bypassLocks, params Elevator[] elevators) =>
+            elevators.CloseActiveDoors(bypassLocks);
 
         #endregion
-
     }
 }

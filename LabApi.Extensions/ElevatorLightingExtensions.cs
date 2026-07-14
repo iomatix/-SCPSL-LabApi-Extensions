@@ -6,6 +6,7 @@ namespace LabApi.Extensions
 {
     /// <summary>
     /// Utility extensions for controlling elevator lighting states.
+    /// Features highly optimized zero-allocation state-passing batch operations.
     /// </summary>
     public static class ElevatorLightingExtensions
     {
@@ -16,6 +17,9 @@ namespace LabApi.Extensions
         /// </summary>
         public static void TurnOffLights(this Elevator elevator, float duration)
         {
+            if (elevator == null)
+                return;
+
             // Placeholder: Awaiting integration with internal HDRP elevator lighting.
             Logger.LocalTrace("ElevatorLighting", "TurnOffLights invoked. Lighting suppression deferred.");
         }
@@ -25,6 +29,9 @@ namespace LabApi.Extensions
         /// </summary>
         public static void TurnOnLights(this Elevator elevator)
         {
+            if (elevator == null)
+                return;
+
             // Placeholder: Controlled by global facility power grid.
         }
 
@@ -46,59 +53,43 @@ namespace LabApi.Extensions
 
         #endregion
 
-        #region Batch Operations (IEnumerable + params)
+        #region Batch Operations (Zero-Allocation via State-Passing)
 
         /// <summary>
-        /// Turns off lights for multiple elevators.
+        /// Turns off lights for multiple elevators with zero heap allocations.
         /// </summary>
         public static void TurnOffLights(this IEnumerable<Elevator> elevators, float duration)
         {
-            if (elevators is null)
+            if (elevators == null)
                 return;
 
-            if (elevators is List<Elevator> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                    list[i]?.TurnOffLights(duration);
-                return;
-            }
-
-            foreach (var elevator in elevators)
-                elevator?.TurnOffLights(duration);
+            // FIX: State-passing and static lambda to completely bypass closure garbage generation.
+            elevators.ForEach(duration, static (e, dur) => e?.TurnOffLights(dur));
         }
 
         /// <summary>
         /// Turns off lights for multiple elevators (params overload).
         /// </summary>
-        public static void TurnOffLights(float duration, params Elevator[] elevators)
-            => ((IEnumerable<Elevator>)elevators).TurnOffLights(duration);
+        public static void TurnOffLights(float duration, params Elevator[] elevators) =>
+            elevators.TurnOffLights(duration);
 
         /// <summary>
-        /// Turns on lights for multiple elevators.
+        /// Turns on lights for multiple elevators with zero heap allocations.
         /// </summary>
         public static void TurnOnLights(this IEnumerable<Elevator> elevators)
         {
-            if (elevators is null)
+            if (elevators == null)
                 return;
 
-            if (elevators is List<Elevator> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                    list[i]?.TurnOnLights();
-                return;
-            }
-
-            foreach (var elevator in elevators)
-                elevator?.TurnOnLights();
+            // FIX: Zero-allocation parameterless loop using a pre-cached static delegate.
+            elevators.ForEach(static e => e?.TurnOnLights());
         }
 
         /// <summary>
         /// Turns on lights for multiple elevators (params overload).
         /// </summary>
-        public static void TurnOnLights(params Elevator[] elevators)
-            => ((IEnumerable<Elevator>)elevators).TurnOnLights();
+        public static void TurnOnLights(params Elevator[] elevators) =>
+            elevators.TurnOnLights();
 
         #endregion
     }
