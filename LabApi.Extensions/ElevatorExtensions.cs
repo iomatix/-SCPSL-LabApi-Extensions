@@ -1,4 +1,5 @@
 ﻿using LabApi.Features.Wrappers;
+using MapGeneration;
 using System.Collections.Generic;
 
 namespace LabApi.Extensions
@@ -9,6 +10,20 @@ namespace LabApi.Extensions
     /// </summary>
     public static class ElevatorExtensions
     {
+        #region Resolution
+        /// <summary>
+        /// Instantly resolves the target destination <see cref="FacilityZone"/> of this elevator sequence.
+        /// </summary>
+        /// <param name="elevator">The active elevator wrapper instance.</param>
+        /// <returns>The destination <see cref="FacilityZone"/>; otherwise, <see cref="FacilityZone.None"/> if unresolved.</returns>
+        public static FacilityZone GetZone(this Elevator elevator)
+        {
+            // FIX: One-liner optimization using null-conditional routing to bypass all loop and array allocations.
+            return elevator?.CurrentDestination?.Zone ?? FacilityZone.None;
+        }
+
+        #endregion
+
         #region Active Floor Operations
 
         /// <summary>
