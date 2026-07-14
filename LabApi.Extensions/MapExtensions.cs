@@ -1,5 +1,7 @@
 ﻿using LabApi.Features.Wrappers;
+using MEC;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace LabApi.Extensions
 {
@@ -13,31 +15,27 @@ namespace LabApi.Extensions
 
         /// <summary>
         /// Breaks all breakable doors in the entire facility with zero heap allocations.
-        /// Reuses highly optimized room door extension.
         /// </summary>
         public static void BreakAllFacilityDoors()
         {
             if (Room.List == null)
                 return;
 
-            // FIX: DRY & Zero-Allocation loop utilizing compiled static delegate.
             Room.List.ForEach(static r => r?.BreakAllDoors());
         }
 
         #endregion
 
-        #region Lights
+        #region Lights & Global Animations
 
         /// <summary>
         /// Enables or disables all lights in the facility with zero heap allocations.
-        /// Uses nested state-passing to completely prevent double-closure garbage generation.
         /// </summary>
         public static void SetAllLightsEnabled(bool enabled)
         {
             if (Room.List == null)
                 return;
 
-            // FIX: Nested state-passing loops over the stack (no closures allocated).
             Room.List.ForEach(enabled, static (room, stateEnabled) =>
             {
                 if (room != null && room.AllLightControllers != null)
@@ -53,13 +51,59 @@ namespace LabApi.Extensions
             });
         }
 
+        /// <summary>
+        /// Private lightweight coroutine that drives the global strobe sequence using a single state loop on the stack.
+        /// Completely avoids heap-allocation scheduling overhead.
+        /// </summary>
+        private static IEnumerator<float> EmergencyStrobeCoroutine(float totalDuration, float pulseInterval, Color alertColor)
+        {
+            float elapsed = 0f;
+            float phase1Duration = pulseInterval * 0.25f;
+            float phase2Duration = pulseInterval * 0.38f; // (0.63 - 0.25)
+            float phase3Duration = pulseInterval * 0.37f; // (1.00 - 0.63)
+
+            while (elapsed < totalDuration)
+            {
+                Map.SetColorOfLights(alertColor);
+                yield return Timing.WaitForSeconds(phase1Duration);
+
+                Map.TurnOffLights();
+                yield return Timing.WaitForSeconds(phase2Duration);
+
+                Map.TurnOnLights();
+                Map.SetColorOfLights(Color.black);
+                yield return Timing.WaitForSeconds(phase3Duration);
+
+                elapsed += pulseInterval;
+            }
+
+            Map.ResetColorOfLights();
+        }
+
+        /// <summary>
+        /// Launches a highly optimized global facility-wide emergency strobe light sequence using a single lightweight coroutine loop.
+        /// </summary>
+        public static CoroutineHandle StartEmergencyStrobe(
+            float totalDuration,
+            float pulseInterval,
+            Color alertColor,
+            string coroutineTag = "LabApi.MapExtensions-emergencyStrobe")
+        {
+            if (pulseInterval <= 0.05f)
+                pulseInterval = 0.1f; // Prevent infinite yield loops
+
+            // FIX: This lives now in MapExtensions as a native, ultra-clean global utility.
+            return string.IsNullOrEmpty(coroutineTag)
+                ? Timing.RunCoroutine(EmergencyStrobeCoroutine(totalDuration, pulseInterval, alertColor))
+                : Timing.RunCoroutine(EmergencyStrobeCoroutine(totalDuration, pulseInterval, alertColor), coroutineTag);
+        }
+
         #endregion
 
         #region Generators
 
         /// <summary>
         /// Returns the number of engaged generators.
-        /// Optimized with list index lookup fast-path to prevent struct-boxing.
         /// </summary>
         public static int GetEngagedGeneratorsCount()
         {
@@ -67,7 +111,6 @@ namespace LabApi.Extensions
             if (generators == null)
                 return 0;
 
-            // FIX: Zero-allocation fast-path for standard Lists.
             if (generators is List<Generator> list)
             {
                 int count = 0;
@@ -83,7 +126,6 @@ namespace LabApi.Extensions
                 return count;
             }
 
-            // Fallback for general collections
             int fallbackCount = 0;
             foreach (var generator in generators)
             {
@@ -98,7 +140,6 @@ namespace LabApi.Extensions
 
         /// <summary>
         /// Returns true if all generators are engaged and the count meets the required minimum.
-        /// Features highly optimized short-circuit logic to immediately exit on the first non-engaged generator.
         /// </summary>
         public static bool AreAllGeneratorsEngaged(int minimumRequiredCount = 3)
         {
@@ -107,12 +148,9 @@ namespace LabApi.Extensions
                 return false;
 
             int total = generators.Count;
-
-            // FIX: Instant early-exit if total generator count is below the minimum required.
             if (total < minimumRequiredCount)
                 return false;
 
-            // FIX: Direct index loop with early-exit. Stop scanning instantly upon hitting a disabled generator.
             if (generators is List<Generator> list)
             {
                 for (int i = 0; i < total; i++)
@@ -124,7 +162,6 @@ namespace LabApi.Extensions
                 return true;
             }
 
-            // Fallback for general collections with early-exit
             foreach (var generator in generators)
             {
                 if (generator == null || !generator.Engaged)
