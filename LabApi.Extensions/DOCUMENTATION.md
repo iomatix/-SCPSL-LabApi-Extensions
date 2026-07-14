@@ -1149,13 +1149,13 @@ public static bool IsWithinRadius(this Room room, Vector3 position, float radius
 ### 🔹 `FlickerLightsCoroutine()`
 **Description:** Executes a flicker animation on the room lights.
 ```csharp
-public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights")
+public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
 ```
 
 ### 🔹 `FlickerLights()`
 **Description:** Starts a flicker animation on multiple rooms.
 ```csharp
-public static void FlickerLights( this IEnumerable<Room> rooms, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights") => rooms?.ForEach(r => { if (r != null) Timing.RunCoroutine(r.FlickerLightsCoroutine(color, duration, frequency, coroutineTag));
+public static void FlickerLights( this IEnumerable<Room> rooms, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights") => rooms?.ForEach(r => { if (r != null) Timing.RunCoroutine(r.FlickerLightsCoroutine(color, duration, frequency), coroutineTag);
 ```
 
 ### 🔹 `FlickerLights()`
@@ -1355,13 +1355,13 @@ public static void TurnOnLights(params FacilityZone[] zones) => ((IEnumerable<Fa
 ### 🔹 `FlickerLightsCoroutine()`
 **Description:** Performs a flicker animation on zone lights.
 ```csharp
-public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights")
+public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
 ```
 
 ### 🔹 `FlickerLights()`
 **Description:** Starts a flicker animation on multiple zones.
 ```csharp
-public static void FlickerLights( this IEnumerable<FacilityZone> zones, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights") => zones?.ForEach(z => { Timing.RunCoroutine(z.FlickerLightsCoroutine(color, duration, frequency, coroutineTag));
+public static void FlickerLights( this IEnumerable<FacilityZone> zones, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights") => zones?.ForEach(z => { Timing.RunCoroutine(z.FlickerLightsCoroutine(color, duration, frequency), coroutineTag);
 ```
 
 ### 🔹 `FlickerLights()`
@@ -1393,7 +1393,7 @@ public static void StartEmergencyStrobe(float totalDuration, float pulseInterval
 ### 🔹 `StartZoneFlicker()`
 **Description:** Launches a non-blocking background asynchronous coroutine loop that flickers the illumination grid of a specific facility zone at a given frequency baseline before reverting to pristine spectrum maps.
 ```csharp
-public static void StartZoneFlicker(MapGeneration.FacilityZone zone, float duration, float frequency, UnityEngine.Color color, string coroutineTag = "LabApi.Extensions.Environment-flickerLights")
+public static void StartZoneFlicker(MapGeneration.FacilityZone zone, float duration, float frequency, Color color, string coroutineTag = "LabApi.Extensions.Environment-flickerLights")
 ```
 
 ---
