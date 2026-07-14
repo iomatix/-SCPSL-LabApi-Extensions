@@ -387,6 +387,31 @@ namespace LabApi.Extensions
             room.SetLightsColor(Color.clear);
         }
 
+        /// <summary>
+        /// Starts a flicker animation on multiple rooms.
+        /// </summary>
+        public static void FlickerLights(
+            this IEnumerable<Room> rooms,
+            Color color,
+            float duration,
+            float frequency)
+            => rooms?.ForEach(r =>
+            {
+                if (r != null)
+                    Timing.RunCoroutine(r.FlickerLightsCoroutine(color, duration, frequency));
+            });
+
+        /// <summary>
+        /// Starts a flicker animation on multiple rooms (params overload).
+        /// </summary>
+        public static void FlickerLights(
+            Color color,
+            float duration,
+            float frequency,
+            params Room[] rooms)
+            => ((IEnumerable<Room>)rooms).FlickerLights(color, duration, frequency);
+
+
         #endregion
     }
 }

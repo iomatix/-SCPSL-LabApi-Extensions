@@ -176,6 +176,30 @@ namespace LabApi.Extensions
             Map.ResetColorOfLights(zone);
         }
 
+        /// <summary>
+        /// Starts a flicker animation on multiple zones.
+        /// </summary>
+        public static void FlickerLights(
+            this IEnumerable<FacilityZone> zones,
+            Color color,
+            float duration,
+            float frequency)
+            => zones?.ForEach(z =>
+            {
+                Timing.RunCoroutine(z.FlickerLightsCoroutine(color, duration, frequency));
+            });
+
+        /// <summary>
+        /// Starts a flicker animation on multiple zones (params overload).
+        /// </summary>
+        public static void FlickerLights(
+            Color color,
+            float duration,
+            float frequency,
+            params FacilityZone[] zones)
+            => ((IEnumerable<FacilityZone>)zones).FlickerLights(color, duration, frequency);
+
+
         #endregion
     }
 }
