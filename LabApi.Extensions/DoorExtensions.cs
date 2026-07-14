@@ -8,7 +8,7 @@ namespace LabApi.Extensions
 {
     /// <summary>
     /// Highly optimized extensions for working with doors and elevators. 
-    /// Features compile-time zero-allocation path routing and fast-path Unity component caching.
+    /// Features JIT-cached state-passing batch operations and fast-path Unity component caching.
     /// </summary>
     public static class DoorExtensions
     {
@@ -122,7 +122,7 @@ namespace LabApi.Extensions
         /// <summary>
         /// Opens the door (if safe) and immediately applies a lock reason.
         /// </summary>
-        public static void OpenAndLock(this Door door, DoorLockReason reason, bool playSound = true)
+        public static void OpenAndLock(this Door door, DoorLockReason reason = DoorLockReason.AdminCommand, bool playSound = true)
         {
             if (door == null)
                 return;
@@ -133,7 +133,6 @@ namespace LabApi.Extensions
 
             if (safeToOpen && playSound)
             {
-                // TODO: Resolve which sound should play here. Currently plays bypass denied.
                 door.PlayLockBypassDeniedSound();
             }
 
@@ -142,7 +141,7 @@ namespace LabApi.Extensions
 
         #endregion
 
-        #region Batch Operations (True Zero-Allocation Paths)
+        #region Batch Operations (True Zero-Allocation Paths via State-Passing)
 
         /// <summary>
         /// Opens all doors in the collection with zero heap allocations.
@@ -152,30 +151,7 @@ namespace LabApi.Extensions
             if (doors == null)
                 return;
 
-            if (doors is Door[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.Open(bypassLocks);
-                }
-                return;
-            }
-
-            if (doors is List<Door> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.Open(bypassLocks);
-                }
-                return;
-            }
-
-            foreach (var d in doors)
-            {
-                d?.Open(bypassLocks);
-            }
+            doors.ForEach(bypassLocks, static (d, bypass) => d?.Open(bypass));
         }
 
         /// <summary>
@@ -192,30 +168,7 @@ namespace LabApi.Extensions
             if (doors == null)
                 return;
 
-            if (doors is Door[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.Close(bypassLocks);
-                }
-                return;
-            }
-
-            if (doors is List<Door> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.Close(bypassLocks);
-                }
-                return;
-            }
-
-            foreach (var d in doors)
-            {
-                d?.Close(bypassLocks);
-            }
+            doors.ForEach(bypassLocks, static (d, bypass) => d?.Close(bypass));
         }
 
         /// <summary>
@@ -227,35 +180,12 @@ namespace LabApi.Extensions
         /// <summary>
         /// Sets lock state for all doors in the collection with zero heap allocations.
         /// </summary>
-        public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason, bool locked = true)
+        public static void SetLockState(this IEnumerable<Door> doors, DoorLockReason reason = DoorLockReason.AdminCommand, bool locked = true)
         {
             if (doors == null)
                 return;
 
-            if (doors is Door[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.SetLockState(reason, locked);
-                }
-                return;
-            }
-
-            if (doors is List<Door> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.SetLockState(reason, locked);
-                }
-                return;
-            }
-
-            foreach (var d in doors)
-            {
-                d?.SetLockState(reason, locked);
-            }
+            doors.ForEach((reason, locked), static (d, state) => d?.SetLockState(state.reason, state.locked));
         }
 
         /// <summary>
@@ -272,30 +202,7 @@ namespace LabApi.Extensions
             if (doors == null)
                 return;
 
-            if (doors is Door[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.SetOpenState(opened, bypassLocks);
-                }
-                return;
-            }
-
-            if (doors is List<Door> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.SetOpenState(opened, bypassLocks);
-                }
-                return;
-            }
-
-            foreach (var d in doors)
-            {
-                d?.SetOpenState(opened, bypassLocks);
-            }
+            doors.ForEach((opened, bypassLocks), static (d, state) => d?.SetOpenState(state.opened, state.bypassLocks));
         }
 
         /// <summary>
@@ -312,30 +219,7 @@ namespace LabApi.Extensions
             if (doors == null)
                 return;
 
-            if (doors is Door[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.OpenAndLock(reason, playSound);
-                }
-                return;
-            }
-
-            if (doors is List<Door> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.OpenAndLock(reason, playSound);
-                }
-                return;
-            }
-
-            foreach (var d in doors)
-            {
-                d?.OpenAndLock(reason, playSound);
-            }
+            doors.ForEach((reason, playSound), static (d, state) => d?.OpenAndLock(state.reason, state.playSound));
         }
 
         /// <summary>
@@ -373,7 +257,6 @@ namespace LabApi.Extensions
                 var elevators = Elevator.GetByGroup(nativeDoor.Group);
                 if (elevators != null)
                 {
-                    // Avoid LINQ allocations for common collections
                     if (elevators is List<Elevator> list && list.Count > 0)
                     {
                         resolved = list[0];

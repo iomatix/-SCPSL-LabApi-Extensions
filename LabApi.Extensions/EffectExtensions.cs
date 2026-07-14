@@ -34,10 +34,9 @@ namespace LabApi.Extensions
         Ghostly, SeveredHands, Stained, Vitality,
         Decontaminating, PocketCorroding
     }
-
     /// <summary>
     /// Ultra high-performance extension methods for status effects management.
-    /// Eliminates boilerplate switches using JIT-compiled delegate array lookups.
+    /// Features compile-time zero-allocation paths and boilerplate-free batch operations using state-passing lambdas.
     /// </summary>
     public static class EffectExtensions
     {
@@ -229,36 +228,17 @@ namespace LabApi.Extensions
 
         /// <summary>
         /// Enables a status effect for all players in the collection with zero heap allocations.
+        /// Uses ValueTuple state-passing and static lambdas to completely avoid GC display class allocation.
         /// </summary>
         public static void EnableEffect(this IEnumerable<Player> players, FacilityEffectType effect, byte intensity = 1, float duration = 0f)
         {
             if (players == null)
                 return;
 
-            if (players is Player[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.EnableEffect(effect, intensity, duration);
-                }
-                return;
-            }
-
-            if (players is List<Player> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.EnableEffect(effect, intensity, duration);
-                }
-                return;
-            }
-
-            foreach (var player in players)
-            {
-                player?.EnableEffect(effect, intensity, duration);
-            }
+            players.ForEach(
+                (effect, intensity, duration),
+                static (player, state) => player?.EnableEffect(state.effect, state.intensity, state.duration)
+            );
         }
 
         /// <summary>
@@ -275,36 +255,17 @@ namespace LabApi.Extensions
 
         /// <summary>
         /// Disables a status effect for all players in the collection with zero heap allocations.
+        /// Uses state-passing and static lambdas to completely avoid GC display class allocation.
         /// </summary>
         public static void DisableEffect(this IEnumerable<Player> players, FacilityEffectType effect)
         {
             if (players == null)
                 return;
 
-            if (players is Player[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.DisableEffect(effect);
-                }
-                return;
-            }
-
-            if (players is List<Player> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.DisableEffect(effect);
-                }
-                return;
-            }
-
-            foreach (var player in players)
-            {
-                player?.DisableEffect(effect);
-            }
+            players.ForEach(
+                effect,
+                static (player, eff) => player?.DisableEffect(eff)
+            );
         }
 
         /// <summary>
@@ -321,30 +282,7 @@ namespace LabApi.Extensions
             if (players == null)
                 return;
 
-            if (players is Player[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < count; i++)
-                {
-                    array[i]?.DisableAllEffects();
-                }
-                return;
-            }
-
-            if (players is List<Player> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < count; i++)
-                {
-                    list[i]?.DisableAllEffects();
-                }
-                return;
-            }
-
-            foreach (var player in players)
-            {
-                player?.DisableAllEffects();
-            }
+            players.ForEach(static player => player?.DisableAllEffects());
         }
 
         /// <summary>
