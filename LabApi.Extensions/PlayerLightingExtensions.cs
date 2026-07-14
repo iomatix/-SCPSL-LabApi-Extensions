@@ -1,5 +1,4 @@
 ﻿using InventorySystem.Items.Firearms.Attachments;
-using InventorySystem.Items.Firearms;
 using LabApi.Features.Wrappers;
 using MEC;
 using System;

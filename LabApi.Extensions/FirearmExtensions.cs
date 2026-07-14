@@ -1,6 +1,5 @@
 ﻿using InventorySystem.Items.Firearms.Attachments;
 using LabApi.Features.Wrappers;
-using System;
 using System.Collections.Generic;
 
 namespace LabApi.Extensions
