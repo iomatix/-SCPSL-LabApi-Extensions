@@ -1,16 +1,15 @@
 ﻿using Interactables.Interobjects.DoorUtils;
 using LabApi.Features.Wrappers;
 using MapGeneration;
-using MEC;
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Utility extensions for working with <see cref="FacilityZone"/>:
-    /// doors, lights, elevators and zone-wide animations.
+    /// Highly optimized utility extensions for working with <see cref="FacilityZone"/>:
+    /// doors, elevator locks and zone registry.
+    /// Employs direct state-passing loops to bypass iterator allocations entirely.
     /// </summary>
     public static class ZoneExtensions
     {
@@ -23,47 +22,163 @@ namespace LabApi.Extensions
 
         #endregion
 
+        #region Helper Detection (Internal & Zero-Allocation)
+
+        /// <summary>
+        /// Helper to check if an elevator belongs to a specific zone without generating heap garbage.
+        /// Shared internally with ZoneLightingExtensions to maintain DRY.
+        /// </summary>
+        internal static bool IsElevatorInZone(Elevator elevator, FacilityZone zone)
+        {
+            if (elevator == null || elevator.CurrentDestination?.Rooms == null)
+                return false;
+
+            // FIX: Using struct enumerator over Rooms collection to achieve true 0-allocation detection.
+            foreach (var r in elevator.CurrentDestination.Rooms)
+            {
+                if (r != null && Room.Get(r.Base)?.Zone == zone)
+                    return true;
+            }
+
+            return false;
+        }
+
+        #endregion
+
         #region Door Operations
 
         /// <summary>
         /// Returns all doors located inside the zone.
         /// </summary>
+        [Obsolete("GetDoors() allocates heap memory due to iterator state machines. For batch operations, use ZoneExtensions.OpenDoors(), CloseDoors(), or SetDoorsLockState() directly to achieve zero allocations.", false)]
         public static IEnumerable<Door> GetDoors(this FacilityZone zone)
         {
+            if (Room.List == null)
+                yield break;
+
             foreach (var room in Room.List)
             {
-                if (room is null || room.Zone != zone || room.Doors is null)
+                if (room == null || room.Zone != zone || room.Doors == null)
                     continue;
 
                 foreach (var door in room.Doors)
-                    yield return door;
+                {
+                    if (door != null)
+                        yield return door;
+                }
             }
         }
 
+        /// <summary>
+        /// Opens all doors in the zone with zero heap allocations.
+        /// </summary>
         public static void OpenDoors(this FacilityZone zone, bool bypassLocks = false)
-            => zone.GetDoors().Open(bypassLocks);
+        {
+            if (Room.List == null)
+                return;
 
-        public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false)
-            => zone.GetDoors().Close(bypassLocks);
+            // FIX: Direct loop over Room.List bypassing GetDoors() iterator allocation entirely.
+            Room.List.ForEach((zone, bypassLocks), static (room, state) =>
+            {
+                if (room == null || room.Zone != state.zone || room.Doors == null)
+                    return;
+
+                room.Doors.ForEach(state.bypassLocks, static (door, bypass) =>
+                {
+                    if (door != null)
+                    {
+                        door.Open(bypass);
+                    }
+                });
+            });
+        }
 
         /// <summary>
-        /// Sets the lock state of all doors in the zone.  
+        /// Closes all doors in the zone with zero heap allocations.
+        /// </summary>
+        public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false)
+        {
+            if (Room.List == null)
+                return;
+
+            // FIX: Direct loop over Room.List bypassing GetDoors() iterator allocation entirely.
+            Room.List.ForEach((zone, bypassLocks), static (room, state) =>
+            {
+                if (room == null || room.Zone != state.zone || room.Doors == null)
+                    return;
+
+                room.Doors.ForEach(state.bypassLocks, static (door, bypass) =>
+                {
+                    if (door != null)
+                    {
+                        door.Close(bypass);
+                    }
+                });
+            });
+        }
+
+        /// <summary>
+        /// Sets the lock state of all doors in the zone with zero heap allocations.
         /// Use <paramref name="locked"/> = false to unlock them.
         /// </summary>
         public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true)
-            => zone.GetDoors().SetLockState(reason, locked);
+        {
+            if (Room.List == null)
+                return;
 
+            // FIX: Direct loop over Room.List bypassing GetDoors() iterator allocation entirely.
+            Room.List.ForEach((zone, reason, locked), static (room, state) =>
+            {
+                if (room == null || room.Zone != state.zone || room.Doors == null)
+                    return;
+
+                room.Doors.ForEach((state.reason, state.locked), static (door, s) =>
+                {
+                    if (door != null)
+                    {
+                        door.SetLockState(s.reason, s.locked);
+                    }
+                });
+            });
+        }
+
+        /// <summary>
+        /// Locks all elevators in the zone with zero heap allocations.
+        /// </summary>
         public static void LockElevators(this FacilityZone zone)
         {
-            zone.GetElevators().ForEach(e => e.LockAllDoors());
+            if (Elevator.List == null)
+                return;
+
+            // FIX: Zero-allocation direct lookup and lock invocation.
+            Elevator.List.ForEach(zone, static (e, z) =>
+            {
+                if (e != null && IsElevatorInZone(e, z))
+                {
+                    e.LockAllDoors();
+                }
+            });
         }
 
         public static void LockElevatorsInZone(FacilityZone zone)
             => zone.LockElevators();
 
+        /// <summary>
+        /// Unlocks all elevators in the zone with zero heap allocations.
+        /// </summary>
         public static void UnlockElevators(this FacilityZone zone)
         {
-            zone.GetElevators().ForEach(e => e.UnlockAllDoors());
+            if (Elevator.List == null)
+                return;
+
+            // FIX: Zero-allocation direct lookup and unlock invocation.
+            Elevator.List.ForEach(zone, static (e, z) =>
+            {
+                if (e != null && IsElevatorInZone(e, z))
+                {
+                    e.UnlockAllDoors();
+                }
+            });
         }
 
         public static void UnlockElevatorsInZone(FacilityZone zone)
@@ -76,131 +191,27 @@ namespace LabApi.Extensions
         /// <summary>
         /// Returns all elevators whose destination rooms belong to the given zone.
         /// </summary>
+        [Obsolete("GetElevators() allocates heap memory due to iterator state machines. For batch operations, use ZoneExtensions.LockElevators() or ZoneLightingExtensions.TurnOffLights() directly to achieve zero allocations.", false)]
         public static IEnumerable<Elevator> GetElevators(this FacilityZone zone)
         {
+            if (Elevator.List == null)
+                yield break;
+
             foreach (var elevator in Elevator.List)
             {
-                var rooms = elevator?.CurrentDestination?.Rooms;
-                if (rooms is null)
-                    continue;
-
-                foreach (var r in rooms)
+                if (elevator != null && IsElevatorInZone(elevator, zone))
                 {
-                    if (Room.Get(r.Base)?.Zone == zone)
-                    {
-                        yield return elevator;
-                        break;
-                    }
+                    yield return elevator;
                 }
             }
         }
 
+        /// <summary>
+        /// Returns all elevators whose destination rooms belong to the given zone.
+        /// </summary>
+        [Obsolete("GetElevatorsInZone() allocates heap memory. Use ZoneExtensions.LockElevators() or ZoneLightingExtensions.TurnOffLights() directly to achieve zero allocations.", false)]
         public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone)
             => zone.GetElevators();
-
-        #endregion
-
-        #region Single-Zone Lights
-
-        /// <summary>
-        /// Turns off lights in the zone and its elevators.
-        /// </summary>
-        public static void TurnOffLights(this FacilityZone zone, float duration)
-        {
-            Map.TurnOffLights(duration, zone);
-            zone.GetElevators().ForEach(e => e.TurnOffLights(duration));
-        }
-
-        /// <summary>
-        /// Turns on lights in the zone and its elevators.
-        /// </summary>
-        public static void TurnOnLights(this FacilityZone zone)
-        {
-            Map.TurnOnLights(zone);
-            zone.GetElevators().ForEach(e => e.TurnOnLights());
-        }
-
-        #endregion
-
-        #region Multi-Zone Lights (IEnumerable + params)
-
-        /// <summary>
-        /// Turns off lights across multiple zones.
-        /// </summary>
-        public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
-        => zones.ForEach(z => z.TurnOffLights(duration));
-      
-        /// <summary>
-        /// Turns off lights across multiple zones (params overload).
-        /// </summary>
-        public static void TurnOffLights(float duration, params FacilityZone[] zones)
-            => ((IEnumerable<FacilityZone>)zones).TurnOffLights(duration);
-
-        /// <summary>
-        /// Turns on lights across multiple zones.
-        /// </summary>
-        public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
-        => zones.ForEach(z => z.TurnOnLights());
-        
-
-        /// <summary>
-        /// Turns on lights across multiple zones (params overload).
-        /// </summary>
-        public static void TurnOnLights(params FacilityZone[] zones)
-            => ((IEnumerable<FacilityZone>)zones).TurnOnLights();
-
-        #endregion
-
-        #region Zone Animations (Unified Flicker)
-
-        /// <summary>
-        /// Performs a flicker animation on zone lights.
-        /// </summary>
-        public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
-        {
-            float interval = 1f / frequency.LimitMin(0.1f);
-            float half = interval * 0.5f;
-            int flickers = (int)(duration / interval);
-
-            Map.SetColorOfLights(color, zone);
-
-            for (int i = 0; i < flickers; i++)
-            {
-                Map.TurnOffLights(half, zone);
-                yield return Timing.WaitForSeconds(half);
-
-                Map.TurnOnLights(zone);
-                yield return Timing.WaitForSeconds(half);
-            }
-
-            Map.ResetColorOfLights(zone);
-        }
-
-        /// <summary>
-        /// Starts a flicker animation on multiple zones.
-        /// </summary>
-        public static void FlickerLights(
-            this IEnumerable<FacilityZone> zones,
-            Color color,
-            float duration,
-            float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights")
-            => zones?.ForEach(z =>
-            {
-                Timing.RunCoroutine(z.FlickerLightsCoroutine(color, duration, frequency), coroutineTag);
-            });
-
-        /// <summary>
-        /// Starts a flicker animation on multiple zones (params overload).
-        /// </summary>
-        public static void FlickerLights(
-            Color color,
-            float duration,
-            float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights",
-            params FacilityZone[] zones)
-            => ((IEnumerable<FacilityZone>)zones).FlickerLights(color, duration, frequency, coroutineTag);
-
 
         #endregion
     }
