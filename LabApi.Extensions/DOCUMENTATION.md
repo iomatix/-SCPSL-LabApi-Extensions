@@ -1,20 +1,98 @@
-# Audio Manager API - Architecture API Registry
+# Company.PluginProject - Architecture API Registry
 
-## 📦 Class: ActionChainExtensions
+## 📦 Class: `Config`
 
----
-
-## 📦 Class: AssemblyExtensions
-
-### 🔹 `FindEmbeddedAsset()`
-**Description:** Finds an embedded resource inside the assembly. Looks for: primaryKey + extension, primaryKey with dots replaced by underscores, or any fallback token. Full manifest resource path if found; otherwise, <c>null</c>. </returns>
+### 🔹 `Validate()`
+**Description:** Validates core plugin settings.
 ```csharp
-public static string FindEmbeddedAsset( this Assembly assembly, string primaryKey, string fileExtension = ".wav", params string[] alternativeTokens)
+public void Validate()
 ```
 
 ---
 
-## 📦 Class: CassieExtensions
+## 📦 Class: `ExiledCompatibilityLayer`
+
+Advanced cross-platform compatibility engine that bridges legacy EXILED configurations with the LabAPI architecture using native OS reparse points or runtime mirroring fail-safes.
+
+### 🔹 `ExecuteFallback()`
+**Description:** Executes the synchronization fallback to bridge directories and load missing configurations.
+```csharp
+public static void ExecuteFallback(Plugin plugin)
+```
+
+---
+
+## 📦 Class: `ExiledCompatibilityLayer`
+
+Advanced cross-platform compatibility engine that bridges legacy EXILED configurations with the LabAPI architecture using native OS reparse points or runtime mirroring fail-safes.
+
+### 🔹 `ExecuteFallback()`
+**Description:** Executes the synchronization fallback to bridge directories and load missing configurations.
+```csharp
+public static void ExecuteFallback(Plugin plugin)
+```
+
+---
+
+## 📦 Struct: `ChainNode<T>`
+
+Represents a single step in an action chain: either a callback or a delay.
+
+---
+
+## 📦 Class: `ActionChain<T>`
+
+Builds and runs a sequence of actions with optional delays.
+
+### 🔹 `Then()`
+**Description:** Adds an action to run immediately.
+```csharp
+public ActionChain<T> Then(Action<T> action)
+```
+
+### 🔹 `Wait()`
+**Description:** Adds a delay before the next action.
+```csharp
+public ActionChain<T> Wait(float seconds)
+```
+
+### 🔹 `Run()`
+**Description:** Starts executing the chain as a coroutine.
+```csharp
+public CoroutineHandle Run(string coroutineTag = null)
+```
+**Parameters:**
+- `coroutineTag`: Optional tag for managing the coroutine.
+
+---
+
+## 📦 Class: `ActionChainExtensions`
+
+Creates a new action chain for the target.
+
+---
+
+## 📦 Class: `AssemblyExtensions`
+
+Helpers for working with embedded resources inside assemblies.
+
+### 🔹 `FindEmbeddedAsset()`
+**Description:** Finds an embedded resource inside the assembly. Looks for: primaryKey + extension, primaryKey with dots replaced by underscores, or any fallback token.
+```csharp
+public static string FindEmbeddedAsset( this Assembly assembly, string primaryKey, string fileExtension = ".wav", params string[] alternativeTokens)
+```
+**Parameters:**
+- `assembly`: Assembly that contains the embedded resources.
+- `primaryKey`: Main name to search for (without extension).
+- `fileExtension`: File extension (e.g. ".wav" or "wav").
+- `alternativeTokens`: Optional fallback names to try if the primary key fails.
+**Returns:** Full manifest resource path if found; otherwise, `null`.
+
+---
+
+## 📦 Class: `CassieExtensions`
+
+Highly optimized helper extensions for working with the CASSIE announcement system.
 
 ### 🔹 `CassieClear()`
 **Description:** Clears the CASSIE announcement queue.
@@ -96,7 +174,9 @@ public static double CalculateTotalMessagesDurations(CassiePlaybackModifiers mod
 
 ---
 
-## 📦 Class: CollectionExtensions
+## 📦 Class: `CollectionExtensions`
+
+Highly optimized extension methods for working with collections, arrays, and cooldown/throttling maps.
 
 ### 🔹 `ForEach()`
 **Description:** Executes the specified action for every item in the collection. Contains optimized zero-allocation fast-paths for Arrays and Lists.
@@ -117,25 +197,33 @@ public static bool All<T, TState>(this IEnumerable<T> source, TState state, Func
 ```
 
 ### 🔹 `ExecuteThrottled()`
-**Description:** Executes the action if the cooldown (based on last execution timestamp) has elapsed. Updates the timestamp to current time and returns true if executed. <remarks> This method uses the "Throttle Model" (stores the last execution time). Do not mix this with absolute lock methods like <see cref="IsCooldownActive{TKey}"/>. </remarks>
+**Description:** Executes the action if the cooldown (based on last execution timestamp) has elapsed. Updates the timestamp to current time and returns true if executed.
+
+> **Remarks:** This method uses the "Throttle Model" (stores the last execution time). Do not mix this with absolute lock methods like `IsCooldownActive`.
 ```csharp
 public static bool ExecuteThrottled<TKey>( this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan window, Action throttleAction)
 ```
 
 ### 🔹 `IsThrottleActive()`
-**Description:** Checks if a throttle-based cooldown is currently active for the specified key. <remarks> Use this method specifically when your map is managed via <see cref="ExecuteThrottled{TKey}"/>. </remarks>
+**Description:** Checks if a throttle-based cooldown is currently active for the specified key.
+
+> **Remarks:** Use this method specifically when your map is managed via `ExecuteThrottled`.
 ```csharp
 public static bool IsThrottleActive<TKey>( this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan window)
 ```
 
 ### 🔹 `IsCooldownActive()`
-**Description:** Checks if a lock-based cooldown is active (where the stored value represents the absolute expiry time). <remarks> Use this method specifically when your map is managed via <see cref="TryAcquireLock{TKey}"/>. </remarks>
+**Description:** Checks if a lock-based cooldown is active (where the stored value represents the absolute expiry time).
+
+> **Remarks:** Use this method specifically when your map is managed via `TryAcquireLock`.
 ```csharp
 public static bool IsCooldownActive<TKey>(this IDictionary<TKey, DateTime> cooldownMap, TKey key)
 ```
 
 ### 🔹 `TryAcquireLock()`
-**Description:** Attempts to acquire a lock for the specified key. If the lock has elapsed or does not exist, commits a new absolute expiration timestamp (current time + lockWindow) and returns true. <remarks> This method uses the "Lock Model" (stores the absolute expiration time). </remarks>
+**Description:** Attempts to acquire a lock for the specified key. If the lock has elapsed or does not exist, commits a new absolute expiration timestamp (current time + lockWindow) and returns true.
+
+> **Remarks:** This method uses the "Lock Model" (stores the absolute expiration time).
 ```csharp
 public static bool TryAcquireLock<TKey>( this IDictionary<TKey, DateTime> cooldownMap, TKey key, TimeSpan lockWindow)
 ```
@@ -148,7 +236,9 @@ public static void PruneExpired<TKey>(this IDictionary<TKey, DateTime> dictionar
 
 ---
 
-## 📦 Class: CommandExtensions
+## 📦 Class: `CommandExtensions`
+
+Advanced and highly optimized helper extensions for command permission verification, target resolution, and safe multi-format argument parsing.
 
 ### 🔹 `ConfirmPermission()`
 **Description:** Returns true if the sender has the required permission. Server console and non-player senders always bypass this check.
@@ -194,10 +284,12 @@ public static string GetRemainingText(this ArraySegment<string> arguments, int s
 
 ---
 
-## 📦 Class: DictionaryExtensions
+## 📦 Class: `DictionaryExtensions`
+
+Performance-focused dictionary extensions backporting modern .NET features to .NET Framework 4.8.
 
 ### 🔹 `Deconstruct()`
-**Description:** Backports KeyValuePair deconstruction to .NET Framework 4.8, enabling C# 9.0 pattern matching and tuple-like iteration. <example> foreach (var (key, value) in myDictionary) { ... } </example>
+**Description:** Backports KeyValuePair deconstruction to .NET Framework 4.8, enabling C# 9.0 pattern matching and tuple-like iteration.
 ```csharp
 public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp, out TKey key, out TValue value)
 ```
@@ -209,7 +301,9 @@ public static TValue GetOrAdd<TKey, TValue>( this IDictionary<TKey, TValue> dict
 ```
 
 ### 🔹 `GetOrAdd()`
-**Description:** Gets a value from the dictionary if it exists; otherwise, adds a new value using a state-passing factory to completely avoid GC closure (lambda display class) allocations. <remarks> Highly recommended for performance-critical systems inside loops or event handlers. </remarks>
+**Description:** Gets a value from the dictionary if it exists; otherwise, adds a new value using a state-passing factory to completely avoid GC closure (lambda display class) allocations.
+
+> **Remarks:** Highly recommended for performance-critical systems inside loops or event handlers.
 ```csharp
 public static TValue GetOrAdd<TKey, TValue, TState>( this IDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TState, TValue> valueFactory, TState state)
 ```
@@ -219,10 +313,13 @@ public static TValue GetOrAdd<TKey, TValue, TState>( this IDictionary<TKey, TVal
 ```csharp
 public static bool TryRemove<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, out TValue value)
 ```
+**Returns:** `true` if the element is successfully found and removed; otherwise, `false`.
 
 ---
 
-## 📦 Class: DoorExtensions
+## 📦 Class: `DoorExtensions`
+
+Highly optimized extensions for working with doors and elevators. Features JIT-cached state-passing batch operations and fast-path Unity component caching.
 
 ### 🔹 `ClearCache()`
 **Description:** Explicitly clears the internal door and elevator caches. Must be called on round restart to prevent critical memory leaks of stale Unity objects.
@@ -237,7 +334,9 @@ public static bool IsOpen(this Door door) => door != null && door.IsOpened;
 ```
 
 ### 🔹 `WhereNameIn()`
-**Description:** Returns only doors whose DoorName matches any of the provided names. <remarks> This is a query operation and will allocate an iterator state-machine under the hood. </remarks>
+**Description:** Returns only doors whose DoorName matches any of the provided names.
+
+> **Remarks:** This is a query operation and will allocate an iterator state-machine under the hood.
 ```csharp
 public static IEnumerable<Door> WhereNameIn(this IEnumerable<Door> doors, params DoorName[] names)
 ```
@@ -370,7 +469,15 @@ public static bool IsGate(this Door door) => door is Gate;
 
 ---
 
-## 📦 Class: EffectExtensions
+## 📦 Enum: `FacilityEffectType`
+
+Specifies the native SCP:Secret Laboratory status effect types.
+
+---
+
+## 📦 Class: `EffectExtensions`
+
+Ultra high-performance extension methods for status effects management. Features compile-time zero-allocation paths and boilerplate-free batch operations using state-passing lambdas.
 
 ### 🔹 `EnableEffect()`
 **Description:** Enables a specific status effect on a single player.
@@ -446,13 +553,18 @@ public static void DisableAllEffects(params Player[] players) => players.Disable
 
 ---
 
-## 📦 Class: ElevatorExtensions
+## 📦 Class: `ElevatorExtensions`
+
+Utility extensions for elevator door control and basic cabin state checks. Reuses core Door extensions to maintain a single source of truth and leverage O(1) instance caching.
 
 ### 🔹 `GetZone()`
-**Description:** Instantly resolves the target destination <see cref="FacilityZone"/> of this elevator sequence.
+**Description:** Instantly resolves the target destination `FacilityZone` of this elevator sequence.
 ```csharp
 public static FacilityZone GetZone(this Elevator elevator)
 ```
+**Parameters:**
+- `elevator`: The active elevator wrapper instance.
+**Returns:** The destination `FacilityZone`; otherwise, `FacilityZone.None` if unresolved.
 
 ### 🔹 `OpenActiveDoors()`
 **Description:** Opens only the doors located on the elevator's current floor.
@@ -492,7 +604,9 @@ public static void CloseActiveDoors(bool bypassLocks, params Elevator[] elevator
 
 ---
 
-## 📦 Class: ElevatorLightingExtensions
+## 📦 Class: `ElevatorLightingExtensions`
+
+Utility extensions for controlling elevator lighting states. Features highly optimized zero-allocation state-passing batch operations.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights in the elevator cabin for the given duration.
@@ -544,7 +658,9 @@ public static void TurnOnLights(params Elevator[] elevators) => elevators.TurnOn
 
 ---
 
-## 📦 Class: EnumExtensions
+## 📦 Class: `EnumExtensions`
+
+Highly optimized extension methods for working with enums. Features compile-time zero-allocation paths and JIT-cached lowercase string representations.
 
 ### 🔹 `ToAudioKey()`
 **Description:** Returns the enum value as a lowercase string without heap allocations or boxing. Reuses JIT-cached string instances.
@@ -566,7 +682,9 @@ public static T GetRandomValue<T>() where T : struct, Enum
 
 ---
 
-## 📦 Class: FirearmExtensions
+## 📦 Class: `FirearmExtensions`
+
+Highly optimized utility extensions for checking firearm attachments. Reuses state-passing query extensions to maintain a zero-allocation, short-circuiting execution path.
 
 ### 🔹 `HasAttachment()`
 **Description:** Returns true if the firearm has the specified attachment enabled.
@@ -600,7 +718,9 @@ public static bool HasAttachment(AttachmentName attachmentName, params FirearmIt
 
 ---
 
-## 📦 Class: HandlerExtensions
+## 📦 Class: `HandlerExtensions`
+
+Highly optimized utility extensions for registering and unregistering LabAPI event handlers. Features JIT-cached static delegates and zero heap allocations during batch operations.
 
 ### 🔹 `Register()`
 **Description:** Registers a single event handler with zero heap allocations.
@@ -640,7 +760,9 @@ public static void UnregisterAll(params CustomEventsHandler[] handlers)
 
 ---
 
-## 📦 Class: IoExtensions
+## 📦 Class: `IoExtensions`
+
+Highly optimized utility extensions for filesystem checks and file operations. Employs lazy enumeration and state-passing loops to guarantee minimal heap allocations.
 
 ### 🔹 `IsReparsePoint()`
 **Description:** Returns true if the path exists and is a reparse point (symlink, junction, etc.). Bypasses redundant filesystem existance checks to minimize disk IO roundtrips.
@@ -656,7 +778,9 @@ public static void CopyFilesTo( this string sourceDirectory, string destinationD
 
 ---
 
-## 📦 Class: MapExtensions
+## 📦 Class: `MapExtensions`
+
+Highly optimized utility extensions for global facility operations: doors, lights, and generators. Employs early-exit (short-circuiting) logic and nested state-passing loops to guarantee 0 heap allocations.
 
 ### 🔹 `BreakAllFacilityDoors()`
 **Description:** Breaks all breakable doors in the entire facility with zero heap allocations.
@@ -690,7 +814,9 @@ public static bool AreAllGeneratorsEngaged(int minimumRequiredCount = 3)
 
 ---
 
-## 📦 Class: MathExtensions
+## 📦 Class: `MathExtensions`
+
+Thread-safe, high-performance math and probability extensions for float, int, and double values. Bypasses UnityEngine.Mathf to guarantee compatibility with background worker threads and maximize JIT inlining.
 
 ### 🔹 `Clamp()`
 **Description:** Clamps the value between the given minimum and maximum.
@@ -910,7 +1036,9 @@ public static int RandomTo(this int min, int max) => SafeRandom.Next(min, max);
 
 ---
 
-## 📦 Class: PickupExtensions
+## 📦 Class: `PickupExtensions`
+
+Highly optimized utility extensions for applying physics impulses to world pickups. Employs state-passing loops and strict Unity lifetime checks to guarantee zero heap allocations.
 
 ### 🔹 `ApplyKineticBlast()`
 **Description:** Applies a physics impulse to a pickup safely.
@@ -932,7 +1060,9 @@ public static void ApplyKineticBlast(float linearVelocityMagnitude, float angula
 
 ---
 
-## 📦 Class: PlayerExtensions
+## 📦 Class: `PlayerExtensions`
+
+Highly optimized utility extensions for working with `Player`. Features compile-time zero-allocation paths and highly optimized double-dispatch fuzzy resolution.
 
 ### 🔹 `AttachTrackingObject()`
 **Description:** Attaches a follower object to the player. The follower tracks the player's transform with an optional offset.
@@ -1098,15 +1228,17 @@ public static bool TryResolveFuzzy(this IEnumerable<Player> players, string iden
 
 ---
 
-## 📦 Class: PlayerLightingExtensions
+## 📦 Class: `PlayerLightingExtensions`
 
-### 🔹 `UnknownMember`
+Highly optimized modular extensions for player lighting states, darkness tracking, and weapon flashlight controls. Features compile-time zero-allocation hot paths, unique item serial verification, and network-safe coroutine cadences.
+
+### 🔹 `PlayerFlickerTagPrefix`
 **Description:** Base prefix applied to player-specific light flicker coroutine tracking tags.
 ```csharp
 public const string PlayerFlickerTagPrefix = "LabApi.Extensions-playerFlickerLights";
 ```
 
-### 🔹 `05f`
+### 🔹 `MinimumFlickerDelay`
 **Description:** Absolute minimum safe delay in seconds enforced between successive light flicker pulses to prevent Mirror packet flooding.
 ```csharp
 public const float MinimumFlickerDelay = 0.05f;
@@ -1117,94 +1249,153 @@ public const float MinimumFlickerDelay = 0.05f;
 ```csharp
 public static bool HasActiveLightSource(this Player player)
 ```
+**Parameters:**
+- `player`: The target player wrapper instance.
+**Returns:** `true` if the held item is emitting light; otherwise, `false`.
 
 ### 🔹 `GetHeldLightSourceState()`
 **Description:** Retrieves the emission state of the player's currently equipped light source.
 ```csharp
 public static bool GetHeldLightSourceState(this Player player)
 ```
+**Parameters:**
+- `player`: The target player wrapper instance.
+**Returns:** `true` if the held light emitter is active; otherwise, `false`.
 
 ### 🔹 `SetHeldLightSourceState()`
 **Description:** Sets the emission state of the player's currently equipped light source (standard flashlight or firearm attachment).
 ```csharp
 public static void SetHeldLightSourceState(this Player player, bool emit)
 ```
+**Parameters:**
+- `player`: The target player wrapper instance.
+- `emit`: The desired emission state.
 
 ### 🔹 `SetHeldLightSourceState()`
 **Description:** Sets the emission state of held light sources across multiple players with zero closure heap allocations.
 ```csharp
 public static void SetHeldLightSourceState(this IEnumerable<Player> players, bool emit)
 ```
+**Parameters:**
+- `players`: The collection of target players.
+- `emit`: The desired emission state.
 
 ### 🔹 `SetHeldLightSourceState()`
 **Description:** Sets the emission state of held light sources across multiple players supplied via parameter array.
 ```csharp
 public static void SetHeldLightSourceState(bool emit, params Player[] players) => players.SetHeldLightSourceState(emit);
 ```
+**Parameters:**
+- `emit`: The desired emission state.
+- `players`: The parameter array of target players.
 
 ### 🔹 `IsInDarkRoom()`
 **Description:** Determines whether the player is currently inside a room where electrical lighting is completely disabled. Fully optimized list loops bypassing struct-boxing.
 ```csharp
 public static bool IsInDarkRoom(this Player player)
 ```
+**Parameters:**
+- `player`: The target player wrapper instance.
+**Returns:** `true` if the current room has disabled light controllers; otherwise, `false`.
 
 ### 🔹 `IsInTrueDarkness()`
 **Description:** Determines whether the player is enveloped in total environmental darkness (either inside an unlit room or an unlit elevator cabin).
 ```csharp
 public static bool IsInTrueDarkness(this Player player)
 ```
+**Parameters:**
+- `player`: The target player wrapper instance.
+**Returns:** `true` if the environmental enclosure is pitch dark; otherwise, `false`.
 
 ### 🔹 `FlickerHeldLightSourceCoroutine()`
 **Description:** Executes an isolated flicker coroutine on the player's held light source. Tracks the exact physical item instance via its unique serial number to prevent state contamination on weapon swapping.
 ```csharp
 public static IEnumerator<float> FlickerHeldLightSourceCoroutine( this Player player, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
 ```
+**Parameters:**
+- `player`: The target player instance.
+- `flickerCount`: The total number of state toggle intervals.
+- `delayPerFlicker`: The delay between state toggles in seconds. Automatically clamped to `MinimumFlickerDelay`.
+- `forceOff`: If set to `true`, the light will remain forcibly turned off upon coroutine completion.
+- `onTickFeedback`: Optional callback dispatched on each tick, passing the player and whether the final force-off state has been reached.
+**Returns:** A coroutine enumerator controlling the flicker progression.
 
 ### 🔹 `FlickerHeldLightSource()`
 **Description:** Initiates a synchronized flicker sequence on held light sources for multiple players with zero heap allocations. Generates deterministic per-player tracking tags to eliminate coroutine race conditions.
 ```csharp
 public static void FlickerHeldLightSource( this IEnumerable<Player> players, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
 ```
+**Parameters:**
+- `players`: The collection of target players.
+- `flickerCount`: The number of flicker state changes.
+- `delayPerFlicker`: Delay in seconds between state toggles.
+- `forceOff`: If `true`, the light source is left disabled after completion.
+- `onTickFeedback`: Optional per-tick callback invoked with the player and terminal status.
 
 ### 🔹 `FlickerHeldLightSource()`
 **Description:** Initiates a flicker sequence on held light sources for multiple players supplied via parameter array.
 ```csharp
 public static void FlickerHeldLightSource( int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players) => players.FlickerHeldLightSource(flickerCount, delayPerFlicker, forceOff, onTickFeedback);
 ```
+**Parameters:**
+- `flickerCount`: The number of flicker state changes.
+- `delayPerFlicker`: Delay in seconds between state toggles.
+- `forceOff`: If `true`, the light source is left disabled after completion.
+- `onTickFeedback`: Optional per-tick callback invoked with the player and terminal status.
+- `players`: The parameter array of target players.
 
 ---
 
-## 📦 Class: PluginConfigExtensions
+## 📦 Class: `PluginConfigExtensions`
+
+Highly optimized utility extensions for loading and validating plugin sub‑config files safely.
 
 ### 🔹 `LoadOrCreateSubConfig()`
-**Description:** Loads a sub‑config file or creates a new one if missing or invalid. Runs optional validation and saves the result back to disk. <typeparam name="TMainConfig">Main plugin config type.</typeparam> <typeparam name="TSubConfig">Sub‑config type to load.</typeparam>
+**Description:** Loads a sub‑config file or creates a new one if missing or invalid. Runs optional validation and saves the result back to disk.
 ```csharp
 public static TSubConfig LoadOrCreateSubConfig<TMainConfig, TSubConfig>( this Plugin<TMainConfig> plugin, string fileName, Action<TSubConfig> validationAction = null) where TMainConfig : LabApiConfig, new() where TSubConfig : class, new()
 ```
+**Type Parameters:**
+- `TMainConfig`: Main plugin config type.
+- `TSubConfig`: Sub‑config type to load.
+**Parameters:**
+- `plugin`: Plugin instance.
+- `fileName`: File name on disk (e.g. "settings.yml").
+- `validationAction`: Optional validation callback.
+**Returns:** Loaded or newly created sub‑config instance.
 
 ---
 
-## 📦 Class: RagdollExtensions
+## 📦 Class: `RagdollExtensions`
+
+Utility extensions for working with Ragdoll entities.
 
 ### 🔹 `GetRagdoll()`
-**Description:** Resolves the API-wrapped <see cref="Ragdoll"/> proxy from this native low-level Unity <see cref="BasicRagdoll"/>.
+**Description:** Resolves the API-wrapped `Ragdoll` proxy from this native low-level Unity `BasicRagdoll`.
 ```csharp
 public static Ragdoll GetRagdoll(this BasicRagdoll ragdoll)
 ```
 
 ---
 
-## 📦 Class: ReferenceHubExtensions
+## 📦 Class: `ReferenceHubExtensions`
+
+Utility extensions for working with native `ReferenceHub` components.
 
 ### 🔹 `GetPlayer()`
-**Description:** Resolves the strongly-typed LabAPI <see cref="Player"/> wrapper from this native <see cref="ReferenceHub"/> safely.
+**Description:** Resolves the strongly-typed LabAPI `Player` wrapper from this native `ReferenceHub` safely.
 ```csharp
 public static Player GetPlayer(this ReferenceHub referenceHub)
 ```
+**Parameters:**
+- `referenceHub`: The native ReferenceHub component instance.
+**Returns:** The API-wrapped `Player` proxy; otherwise, `null` if the hub is invalid or destroyed.
 
 ---
 
-## 📦 Class: RoomExtensions
+## 📦 Class: `RoomExtensions`
+
+Highly optimized utility extensions for working with `Room` and `RoomName`. Includes neighbor lookups, generator checks, door operations, and spatial helpers with zero heap allocations.
 
 ### 🔹 `GetNeighbors()`
 **Description:** Returns all rooms directly connected to this room.
@@ -1310,21 +1501,23 @@ public static bool IsWithinRadius(this Room room, Vector3 position, float radius
 
 ---
 
-## 📦 Class: RoomLightingExtensions
+## 📦 Class: `RoomLightingExtensions`
 
-### 🔹 `1f`
+Highly optimized extensions for controlling room lighting states and executing server-friendly flicker animations. Reuses core Room spatial structures and native engine light controller pipelines to eliminate network overhead.
+
+### 🔹 `MinimumFrequency`
 **Description:** Minimum allowable frequency in Hertz to avoid zero-division and infinite delay states.
 ```csharp
 public const float MinimumFrequency = 0.1f;
 ```
 
-### 🔹 `2f`
+### 🔹 `MaximumSafeFrequency`
 **Description:** Maximum safe frequency in Hertz. Constrains network SyncVar / RPC dispatch rates to prevent Mirror buffer saturation.
 ```csharp
 public const float MaximumSafeFrequency = 1.2f;
 ```
 
-### 🔹 `UnknownMember`
+### 🔹 `DefaultFlickerTag`
 **Description:** Default coroutine tag assigned to room light flicker operations.
 ```csharp
 public const string DefaultFlickerTag = "LabApi.Extensions-flickerLights";
@@ -1335,94 +1528,153 @@ public const string DefaultFlickerTag = "LabApi.Extensions-flickerLights";
 ```csharp
 public static void TurnOffLights(this Room room, float duration)
 ```
+**Parameters:**
+- `room`: The target room wrapper instance.
+- `duration`: The total duration in seconds for which the lights remain off.
 
 ### 🔹 `TurnOnLights()`
 **Description:** Turns on lights in the specified room and optionally initiates an introductory native flicker effect.
 ```csharp
 public static void TurnOnLights(this Room room, float flickerDuration = 0f)
 ```
+**Parameters:**
+- `room`: The target room wrapper instance.
+- `flickerDuration`: The duration in seconds of the introductory native flicker effect. Defaults to 0.
 
 ### 🔹 `TurnOffRoomAndNeighborLights()`
 **Description:** Turns off lights in the specified room and all directly adjacent neighboring rooms.
 ```csharp
 public static void TurnOffRoomAndNeighborLights(this Room room, float duration) => room.ExecuteActionOnRoomAndNeighbors(duration, static (r, dur) => r.TurnOffLights(dur));
 ```
+**Parameters:**
+- `room`: The origin room instance.
+- `duration`: The duration in seconds during which lighting remains disabled.
 
 ### 🔹 `TurnOnRoomAndNeighborLights()`
 **Description:** Turns on lights in the specified room and all directly adjacent neighboring rooms.
 ```csharp
 public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f) => room.ExecuteActionOnRoomAndNeighbors(duration, static (r, dur) => r.TurnOnLights(dur));
 ```
+**Parameters:**
+- `room`: The origin room instance.
+- `duration`: The duration in seconds for the optional startup flicker sequence.
 
 ### 🔹 `SetLightsColor()`
 **Description:** Sets the ambient override light color for the specified room.
 ```csharp
 public static void SetLightsColor(this Room room, Color color)
 ```
+**Parameters:**
+- `room`: The target room instance.
+- `color`: The target color spectrum applied to the room lighting controllers.
 
 ### 🔹 `SetLightsColor()`
 **Description:** Applies an override light color across a collection of rooms with zero closure allocations.
 ```csharp
 public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
 ```
+**Parameters:**
+- `rooms`: The collection of target rooms.
+- `color`: The color spectrum to apply.
 
 ### 🔹 `SetLightsColor()`
 **Description:** Applies an override light color across multiple rooms supplied via parameter array.
 ```csharp
 public static void SetLightsColor(Color color, params Room[] rooms) => rooms.SetLightsColor(color);
 ```
+**Parameters:**
+- `color`: The color spectrum to apply.
+- `rooms`: The array of rooms to modify.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights across a collection of rooms for a specified duration with zero heap allocations.
 ```csharp
 public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
 ```
+**Parameters:**
+- `rooms`: The collection of target rooms.
+- `duration`: The duration in seconds for which lights remain disabled.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights across multiple rooms supplied via parameter array.
 ```csharp
 public static void TurnOffLights(float duration, params Room[] rooms) => rooms.TurnOffLights(duration);
 ```
+**Parameters:**
+- `duration`: The duration in seconds for which lights remain disabled.
+- `rooms`: The array of rooms to modify.
 
 ### 🔹 `TurnOnLights()`
 **Description:** Turns on lights across a collection of rooms with zero heap allocations.
 ```csharp
 public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
 ```
+**Parameters:**
+- `rooms`: The collection of target rooms.
+- `flickerDuration`: Optional startup flicker duration in seconds.
 
 ### 🔹 `TurnOnLights()`
 **Description:** Turns on lights across multiple rooms supplied via parameter array.
 ```csharp
 public static void TurnOnLights(float flickerDuration, params Room[] rooms) => rooms.TurnOnLights(flickerDuration);
 ```
+**Parameters:**
+- `flickerDuration`: Optional startup flicker duration in seconds.
+- `rooms`: The array of rooms to modify.
 
 ### 🔹 `FlickerLightsCoroutine()`
 **Description:** Executes a synchronized native pulse flicker animation across an individual room. Utilizes the native engine light controller pipelines and clamps dispatch frequency to preserve server TPS.
 ```csharp
 public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
 ```
+**Parameters:**
+- `room`: The target room to animate.
+- `color`: The ambient override color applied during the flicker sequence.
+- `duration`: The total lifetime of the flicker sequence in seconds.
+- `frequency`: The desired cadence frequency in Hertz. Automatically clamped between `MinimumFrequency` and `MaximumSafeFrequency`.
+**Returns:** A coroutine enumerator managing the temporal pulse progression.
 
 ### 🔹 `FlickerLightsBatchCoroutine()`
 **Description:** Executes a unified, single-coroutine batch pulse flicker animation across multiple rooms. Enforces native engine light triggers at the specified cadence while shielding the Mirror networking pipeline from packet saturation.
 ```csharp
 public static IEnumerator<float> FlickerLightsBatchCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
 ```
+**Parameters:**
+- `rooms`: The collection of rooms to animate.
+- `color`: The ambient override color active throughout the sequence.
+- `duration`: Total animation lifetime in seconds.
+- `frequency`: The rhythm frequency in Hertz. Clamped internally to protect network buffers.
+**Returns:** A unified coroutine enumerator controlling all target room lights simultaneously.
 
 ### 🔹 `FlickerLights()`
 **Description:** Initiates a synchronized, low-overhead native flicker animation across multiple rooms using a single centralized coroutine.
 ```csharp
 public static void FlickerLights( this IEnumerable<Room> rooms, Color color, float duration, float frequency, string coroutineTag = DefaultFlickerTag)
 ```
+**Parameters:**
+- `rooms`: The collection of target rooms undergoing visual containment disruption.
+- `color`: The override color displayed during active flicker intervals.
+- `duration`: The operational window of the flicker effect in seconds.
+- `frequency`: The pulse cadence in Hertz. Clamped to safe thresholds to guarantee packet stability.
+- `coroutineTag`: MEC tracking tag used to manage or cancel active coroutine pipelines.
 
 ### 🔹 `FlickerLights()`
 **Description:** Initiates a synchronized native flicker animation across multiple rooms supplied via parameter array.
 ```csharp
 public static void FlickerLights( Color color, float duration, float frequency, string coroutineTag = DefaultFlickerTag, params Room[] rooms) => rooms.FlickerLights(color, duration, frequency, coroutineTag);
 ```
+**Parameters:**
+- `color`: The override color displayed during active flicker intervals.
+- `duration`: The operational window of the flicker effect in seconds.
+- `frequency`: The pulse cadence in Hertz.
+- `coroutineTag`: MEC tracking tag used to manage or cancel active coroutine pipelines.
+- `rooms`: The parameter array of target rooms.
 
 ---
 
-## 📦 Class: StringExtensions
+## 📦 Class: `StringExtensions`
+
+Highly optimized utility extensions for string manipulation, normalization, and distance metrics. Employs array pooling and allocation-free fast-paths to completely protect the Garbage Collector during fuzzy target lookups.
 
 ### 🔹 `NormalizeUserId()`
 **Description:** Returns the user ID in lowercase, or an empty string if null. Bypasses string allocations completely if the ID is already lowercase (99% of cases).
@@ -1438,10 +1690,12 @@ public static int ComputeLevenshteinDistance(this string source, string target)
 
 ---
 
-## 📦 Class: TeslaExtensions
+## 📦 Class: `TeslaExtensions`
+
+Highly optimized utility extensions for controlling Tesla gates. Features zero-allocation state-passing batch operations and unified null-safety.
 
 ### 🔹 `DisableFor()`
-**Description:** Disables a Tesla gate for a given duration. Use <paramref name="forceTrigger"/> to trigger a discharge.
+**Description:** Disables a Tesla gate for a given duration. Use `forceTrigger` to trigger a discharge.
 ```csharp
 public static void DisableFor(this Tesla tesla, float duration, bool forceTrigger = true)
 ```
@@ -1460,10 +1714,12 @@ public static void DisableFor(float duration, bool forceTrigger, params Tesla[] 
 
 ---
 
-## 📦 Class: TimingExtensions
+## 📦 Class: `TimingExtensions`
+
+Highly optimized utility extensions for working with MEC coroutines. Features zero-allocation batch operations and custom lightweight, closure-free delayed runners.
 
 ### 🔹 `CallDelayedIf()`
-**Description:** Calls <paramref name="action"/> after a delay if <paramref name="condition"/> returns true.
+**Description:** Calls `action` after a delay if `condition` returns true.
 ```csharp
 public static CoroutineHandle CallDelayedIf(float delay, Func<bool> condition, Action action, string coroutineTag = "LabApi.Extensions-callDelayedIf")
 ```
@@ -1512,7 +1768,9 @@ public static void KillAllAndClear(this List<CoroutineHandle> handles)
 
 ---
 
-## 📦 Class: VectorExtensions
+## 📦 Class: `VectorExtensions`
+
+Thread-safe, high-performance utility extensions for Unity Vector3. Bypasses native engine boundary transitions and UnityEngine.Random to maximize speed and thread compatibility.
 
 ### 🔹 `GetDistanceTo()`
 **Description:** Returns the distance between two points.
@@ -1594,9 +1852,11 @@ public static Vector3 Sanitize(this Vector3 vector, Vector3 fallback = default)
 
 ---
 
-## 📦 Class: ZoneExtensions
+## 📦 Class: `ZoneExtensions`
 
-### 🔹 `UnknownMember()`
+Highly optimized utility extensions for working with `FacilityZone`: doors, elevator locks and zone registry. Employs direct state-passing loops to bypass iterator allocations entirely.
+
+### 🔹 `All`
 **Description:** Cached array of all facility zones (zero enum allocation).
 ```csharp
 public static readonly FacilityZone[] All = (FacilityZone[])Enum.GetValues(typeof(FacilityZone));
@@ -1627,7 +1887,7 @@ public static void CloseDoors(this FacilityZone zone, bool bypassLocks = false)
 ```
 
 ### 🔹 `SetDoorsLockState()`
-**Description:** Sets the lock state of all doors in the zone with zero heap allocations. Use <paramref name="locked"/> = false to unlock them.
+**Description:** Sets the lock state of all doors in the zone with zero heap allocations. Use `locked` = false to unlock them.
 ```csharp
 public static void SetDoorsLockState(this FacilityZone zone, DoorLockReason reason, bool locked = true)
 ```
@@ -1658,65 +1918,102 @@ public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zon
 
 ---
 
-## 📦 Class: ZoneLightingExtensions
+## 📦 Class: `ZoneLightingExtensions`
+
+Highly optimized utility extensions for controlling lighting states and executing synchronized animations in `FacilityZone`. Leverages underlying room pipeline extensions and native engine controllers with zero closure garbage.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights across the specified zone and its connected elevator shafts with zero heap allocations.
 ```csharp
 public static void TurnOffLights(this FacilityZone zone, float duration)
 ```
+**Parameters:**
+- `zone`: The target facility zone.
+- `duration`: The duration in seconds during which lights remain deactivated.
 
 ### 🔹 `TurnOnLights()`
 **Description:** Restores lights across the specified zone and its connected elevator shafts with zero heap allocations.
 ```csharp
 public static void TurnOnLights(this FacilityZone zone)
 ```
+**Parameters:**
+- `zone`: The target facility zone.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights across multiple facility zones with zero heap allocations.
 ```csharp
 public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
 ```
+**Parameters:**
+- `zones`: The collection of target zones.
+- `duration`: The duration in seconds for which lights remain deactivated.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights across multiple facility zones supplied via parameter array.
 ```csharp
 public static void TurnOffLights(float duration, params FacilityZone[] zones)
 ```
+**Parameters:**
+- `duration`: The duration in seconds for which lights remain deactivated.
+- `zones`: The array of target zones.
 
 ### 🔹 `TurnOnLights()`
 **Description:** Restores lights across multiple facility zones with zero heap allocations.
 ```csharp
 public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
 ```
+**Parameters:**
+- `zones`: The collection of target zones.
 
 ### 🔹 `TurnOnLights()`
 **Description:** Restores lights across multiple facility zones supplied via parameter array.
 ```csharp
 public static void TurnOnLights(params FacilityZone[] zones)
 ```
+**Parameters:**
+- `zones`: The array of target zones.
 
 ### 🔹 `FlickerLightsCoroutine()`
-**Description:** Executes a synchronized native pulse flicker animation across all rooms within a specified zone. Reuses <see cref="RoomLightingExtensions.FlickerLightsBatchCoroutine"/> to enforce DRY and guarantee network safety.
+**Description:** Executes a synchronized native pulse flicker animation across all rooms within a specified zone. Reuses `RoomLightingExtensions.FlickerLightsBatchCoroutine` to enforce DRY and guarantee network safety.
 ```csharp
 public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
 ```
+**Parameters:**
+- `zone`: The target facility zone.
+- `color`: The override color applied during the animation window.
+- `duration`: Total animation lifetime in seconds.
+- `frequency`: Cadence frequency in Hertz. Clamped internally to prevent Mirror network buffer overflow.
+**Returns:** A coroutine enumerator controlling the zone-wide pulse progression.
 
 ### 🔹 `FlickerLights()`
 **Description:** Initiates a synchronized, low-overhead native flicker animation across multiple facility zones using a single centralized coroutine.
 ```csharp
 public static void FlickerLights( this IEnumerable<FacilityZone> zones, Color color, float duration, float frequency, string coroutineTag = RoomLightingExtensions.DefaultFlickerTag)
 ```
+**Parameters:**
+- `zones`: The collection of target zones undergoing lockdown flicker disruption.
+- `color`: The override color applied during the animation sequence.
+- `duration`: The duration in seconds for the active animation window.
+- `frequency`: The cadence frequency in Hertz. Automatically clamped to network-safe bounds.
+- `coroutineTag`: MEC tracking tag used to cancel or manage active animation coroutines.
 
 ### 🔹 `FlickerLights()`
 **Description:** Initiates a synchronized native flicker animation across multiple facility zones supplied via parameter array.
 ```csharp
 public static void FlickerLights( Color color, float duration, float frequency, string coroutineTag = RoomLightingExtensions.DefaultFlickerTag, params FacilityZone[] zones) => zones.FlickerLights(color, duration, frequency, coroutineTag);
 ```
+**Parameters:**
+- `color`: The override color applied during the animation sequence.
+- `duration`: The duration in seconds for the active animation window.
+- `frequency`: The cadence frequency in Hertz.
+- `coroutineTag`: MEC tracking tag used to cancel or manage active animation coroutines.
+- `zones`: The parameter array of target zones.
 
 ---
 
-## 📦 Class: ExiledCompatibilityLayer
+## 📦 Class: `ExiledCompatibilityLayer`
+
+Advanced cross-platform compatibility engine that bridges legacy EXILED configurations with the LabAPI architecture using native OS directory junctions or runtime mirroring fallbacks.
 
 ### 🔹 `ExecuteFallback()`
 **Description:** Executes the synchronization fallback to bridge directories and load missing configurations safely.
@@ -1726,7 +2023,27 @@ public static void ExecuteFallback(Plugin plugin)
 
 ---
 
-## 📦 Class: EnvironmentEngine
+## 📦 Class: `RuntimeTransformTracker`
+
+A lightweight Unity MonoBehaviour that smoothly locks its position (and optionally rotation) to a target Transform with a specified offset.
+
+### 🔹 `Setup()`
+**Description:** Configures the tracking targets, offset parameters, and custom validity checks safely.
+```csharp
+public void Setup( Transform target, Vector3 positionOffset = default, Func<bool> validityPredicate = null, // FIX: Restored to 3rd position to guarantee 100% legacy call compatibility! bool trackRotation = false, Quaternion? rotationOffset = null) // FIX: Used nullable type to avoid invalid default(Quaternion) (0,0,0,0) bug.
+```
+**Parameters:**
+- `target`: The target transform to follow.
+- `positionOffset`: The position offset relative to the target.
+- `validityPredicate`: Optional callback check. If it returns false, the tracker auto-destructs.
+- `trackRotation`: If set to true, the tracker will also match the target's rotation.
+- `rotationOffset`: The rotation offset relative to the target (defaults to identity).
+
+---
+
+## 📦 Class: `EnvironmentEngine`
+
+Legacy environment manipulation helpers.
 
 ### 🔹 `StartEmergencyStrobe()`
 **Description:** Launches a background strobe loop.
@@ -1742,17 +2059,24 @@ public static void StartZoneFlicker( MapGeneration.FacilityZone zone, float dura
 
 ---
 
-## 📦 Class: EscapeEngine
+## 📦 Class: `EscapeEngine`
+
+Utility engine designed to orchestrate and execute custom player escape scenarios safely.
 
 ### 🔹 `RunScenarioRoutine()`
 **Description:** Runs a non-blocking asynchronous evacuation routine driven by the provided scenario parameters.
 ```csharp
 public static IEnumerator<float> RunScenarioRoutine(EscapeScenario scenario)
 ```
+**Parameters:**
+- `scenario`: The escape scenario configuration rules driving this process.
+**Returns:** An enumerator tracking the active timeline states.
 
 ---
 
-## 📦 Class: EscapeScenario
+## 📦 Class: `EscapeScenario`
+
+Configuration template representing player escape conditions, teleportations, and visual progression scenarios.
 
 ### 🔹 `Name`
 **Description:** Gets or sets the name or display label of this scenario.
@@ -1864,7 +2188,39 @@ public Action OnSequenceFinalized { get; set; }
 
 ---
 
-## 📦 Class: StringInterpretationExtensions
+## 📦 Enum: `InterpretationStatus`
+
+Outlines the structural resolution status of a fuzzy text interpretation sequence.
+
+---
+
+## 📦 Struct: `InterpretationResult<T>`
+
+Immutable result container holding the execution metrics of a string interpretation sequence. Implemented as a readonly struct to prevent heap allocations during parsing.
+
+### 🔹 `Status`
+**Description:** Gets the final resolution status of the execution pipeline.
+```csharp
+public InterpretationStatus Status { get; }
+```
+
+### 🔹 `Value`
+**Description:** Gets the verified strongly-typed enum value. Evaluates to default if status is not DefinitiveMatch.
+```csharp
+public T Value { get; }
+```
+
+### 🔹 `Candidates`
+**Description:** Gets the list of close structural candidates discovered if the command invocation was ambiguous.
+```csharp
+public string[] Candidates { get; }
+```
+
+---
+
+## 📦 Class: `StringInterpretationExtensions`
+
+High-performance parsing engine delivering fuzzy string resolution, acronym mapping, and typo-tolerance layers. Uses static generic caching to completely eliminate runtime reflection overhead.
 
 ### 🔹 `InterpretEnum()`
 **Description:** Interprets a raw string input and resolves it against an enum layout using multi-stage heuristic cascades.
@@ -1874,7 +2230,9 @@ public static InterpretationResult<T> InterpretEnum<T>(this string input) where 
 
 ---
 
-## 📦 Class: SafeRandom
+## 📦 Class: `SafeRandom`
+
+Thread-safe utility for generating pseudo-random numbers. Uses ThreadStatic isolation to eliminate concurrency locks across asynchronous coroutines and threads.
 
 ### 🔹 `Next()`
 **Description:** Generates a thread-safe random integer between min (inclusive) and max (exclusive).
@@ -1896,35 +2254,39 @@ public static float Range(float min, float max) => (float)(ThreadRandom.NextDoub
 
 ---
 
-## 📦 Class: SpatialMap
+## 📦 Class: `SpatialMap`
+
+Legacy spatial lookup and entity resolution queries. Kept as a compatibility bridge.
 
 ### 🔹 `GetRandomElevator()`
-**Description:** Retrieves a randomly selected <see cref="Elevator"/> instance.
+**Description:** Retrieves a randomly selected `Elevator` instance.
 ```csharp
 public static Elevator GetRandomElevator() => Map.GetRandomElevator();
 ```
 
 ### 🔹 `GetRoomAtPosition()`
-**Description:** Resolves a 3D coordinate vector to its corresponding <see cref="Room"/> containment bounds.
+**Description:** Resolves a 3D coordinate vector to its corresponding `Room` containment bounds.
 ```csharp
 public static Room GetRoomAtPosition(Vector3 position) => position.GetRoom();
 ```
 
 ### 🔹 `GetPlayer()`
-**Description:** Resolves a wrapped <see cref="Player"/> instance from a native <see cref="ReferenceHub"/>.
+**Description:** Resolves a wrapped `Player` instance from a native `ReferenceHub`.
 ```csharp
 public static Player GetPlayer(ReferenceHub referenceHub) => referenceHub.GetPlayer();
 ```
 
 ### 🔹 `GetRagdoll()`
-**Description:** Resolves a wrapped <see cref="Ragdoll"/> instance from a native <see cref="BasicRagdoll"/>.
+**Description:** Resolves a wrapped `Ragdoll` instance from a native `BasicRagdoll`.
 ```csharp
 public static Ragdoll GetRagdoll(BasicRagdoll ragdoll) => ragdoll.GetRagdoll();
 ```
 
 ---
 
-## 📦 Class: iLogger
+## 📦 Class: `iLogger`
+
+Centralized logging utility providing fast, structured console outputs with automatic full call-path resolution.
 
 ### 🔹 `Info()`
 **Description:** Logs an informational message, automatically resolving the full dotted call path.
@@ -1994,41 +2356,83 @@ public static void LocalTrace(string source, string message)
 
 ---
 
-## 📦 Class: PluginBuilder
+## 📦 Struct: `NestingNode<TContext, TLogic>`
+
+A generic structural node designed to bind a logic layer to its parent context.
+
+### 🔹 `Logic`
+**Description:** Gets the encapsulated runtime logic instance.
+```csharp
+public TLogic Logic { get; }
+```
+
+### 🔹 `NestingNode()`
+**Description:** Initializes a new instance of the `NestingNode` struct safely.
+```csharp
+public NestingNode(TContext context, Func<TContext, TLogic> logicFactory)
+```
+**Parameters:**
+- `context`: The parent framework context instance to bind.
+- `logicFactory`: The factory delegate used to instantiate the logic layer, injecting the context.
+
+---
+
+## 📦 Class: `PluginBuilder`
+
+Static companion factory providing implicit type-inference for the fluent plugin builder.
 
 ### 🔹 `Create()`
-**Description:** Initiates a fluent builder instance utilizing implicit compiler type inference. <typeparam name="TConfig">The primary configuration type inferred by the compiler.</typeparam>
+**Description:** Initiates a fluent builder instance utilizing implicit compiler type inference.
 ```csharp
 public static PluginBuilder<TConfig> Create<TConfig>(Plugin<TConfig> plugin) where TConfig : LabApiConfig, new()
 ```
+**Type Parameters:**
+- `TConfig`: The primary configuration type inferred by the compiler.
+**Parameters:**
+- `plugin`: The live plugin instance.
+**Returns:** A zero-allocation fluent `PluginBuilder` struct.
 
-### 🔹 `new()`
-**Description:** A zero-allocation, lightweight fluent builder designed to streamline sub-configuration loading and module initialization. Implemented as a readonly struct to completely eliminate heap garbage during plugin bootstrap sequences. <typeparam name="TConfig">The primary configuration type conforming to <see cref="LabApiConfig"/>.</typeparam>
-```csharp
-public readonly struct PluginBuilder<TConfig> where TConfig : LabApiConfig, new()
-```
+---
+
+## 📦 Struct: `PluginBuilder<TConfig>`
+
+A zero-allocation, lightweight fluent builder designed to streamline sub-configuration loading and module initialization. Implemented as a readonly struct to completely eliminate heap garbage during plugin bootstrap sequences.
 
 ### 🔹 `PluginBuilder()`
-**Description:** Initializes a new instance of the <see cref="PluginBuilder{TConfig}"/> struct.
+**Description:** Initializes a new instance of the `PluginBuilder` struct.
 ```csharp
 public PluginBuilder(Plugin<TConfig> plugin)
 ```
+**Parameters:**
+- `plugin`: The live plugin instance.
 
 ### 🔹 `BindSubConfig()`
-**Description:** Dynamically loads, validates, and binds a sub-configuration file to a plugin field or property. <typeparam name="TSubConfig">The target sub-configuration class type being loaded.</typeparam>
+**Description:** Dynamically loads, validates, and binds a sub-configuration file to a plugin field or property.
 ```csharp
 public PluginBuilder<TConfig> BindSubConfig<TSubConfig>( string fileName, Action<TSubConfig> bindAction, Action<TSubConfig> validationAction = null) where TSubConfig : class, new()
 ```
+**Type Parameters:**
+- `TSubConfig`: The target sub-configuration class type being loaded.
+**Parameters:**
+- `fileName`: The specific file name on disk (e.g. "settings.yml").
+- `bindAction`: The assignment callback mapping the loaded configuration to a plugin property.
+- `validationAction`: An optional validation callback executed to enforce custom rules.
+**Returns:** The current struct context to support fluent method chaining with zero heap allocations.
 
 ### 🔹 `InitializeModule()`
 **Description:** Executes an initialization routine or boots up a subsystem component as part of the fluent pipeline.
 ```csharp
 public PluginBuilder<TConfig> InitializeModule(Action initAction)
 ```
+**Parameters:**
+- `initAction`: The callback containing the initialization steps.
+**Returns:** The current struct context to support fluent method chaining with zero heap allocations.
 
 ---
 
-## 📦 Class: RoundController
+## 📦 Class: `RoundController`
+
+Centralized controller to register, track, and safely execute custom round scenarios while overriding native round ending metrics.
 
 ### 🔹 `IsRoundEndLocked`
 **Description:** Gets a value indicating whether the native server automatic round evaluation loop is currently locked out.
@@ -2074,3 +2478,20 @@ public T GetScenario<T>() where T : RoundScenario
 
 ---
 
+## 📦 Class: `RoundScenario`
+
+Abstract template for defining custom server-side round ending sequences, gamemode transitions, or map events.
+
+### 🔹 `OnCleanupRequested`
+**Description:** Gets or sets an optional custom lifecycle cleanup hook executed automatically when the scenario completes.
+```csharp
+public Action OnCleanupRequested { get; set; }
+```
+
+### 🔹 `Execute()`
+**Description:** Executes the concrete internal scenario logic. Must be overridden by implementation nodes.
+```csharp
+public abstract void Execute();
+```
+
+---
