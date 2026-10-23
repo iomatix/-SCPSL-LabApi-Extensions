@@ -7,16 +7,30 @@ using System.Collections.Generic;
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Highly optimized modular extensions for player lighting states, darkness tracking and weapon flashlight controls.
-    /// Features compile-time zero-allocation paths.
+    /// Highly optimized modular extensions for player lighting states, darkness tracking, and weapon flashlight controls.
+    /// Features compile-time zero-allocation hot paths, unique item serial verification, and network-safe coroutine cadences.
     /// </summary>
     public static class PlayerLightingExtensions
     {
+        #region Constants & Operational Boundaries
+        /// <summary>
+        /// Base prefix applied to player-specific light flicker coroutine tracking tags.
+        /// </summary>
+        public const string PlayerFlickerTagPrefix = "LabApi.Extensions-playerFlickerLights";
+
+        /// <summary>
+        /// Absolute minimum safe delay in seconds enforced between successive light flicker pulses to prevent Mirror packet flooding.
+        /// </summary>
+        public const float MinimumFlickerDelay = 0.05f;
+        #endregion
+
         #region Active Light Source State & Emission
 
         /// <summary>
-        /// Returns true if the player's held item emits light (flashlight or light item).
+        /// Determines whether the player's currently held item is an active, emitting light source (e.g., powered flashlight or enabled firearm attachment).
         /// </summary>
+        /// <param name="player">The target player wrapper instance.</param>
+        /// <returns><see langword="true"/> if the held item is emitting light; otherwise, <see langword="false"/>.</returns>
         public static bool HasActiveLightSource(this Player player)
         {
             if (player == null)
@@ -26,11 +40,12 @@ namespace LabApi.Extensions
             if (item == null)
                 return false;
 
-            // Toggleable light items
-            if (item.Base is InventorySystem.Items.ToggleableLights.ToggleableLightItemBase lightItem)
-                return lightItem.IsEmittingLight;
+            if (item is LightItem lightItem)
+                return lightItem.IsEmitting;
 
-            // Firearm flashlight
+            if (item.Base is InventorySystem.Items.ToggleableLights.ToggleableLightItemBase baseLight)
+                return baseLight.IsEmittingLight;
+
             if (item is FirearmItem firearm)
                 return firearm.FlashlightEnabled && firearm.HasAttachment(AttachmentName.Flashlight);
 
@@ -38,57 +53,72 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Returns true if the player's held light source is currently emitting.
+        /// Retrieves the emission state of the player's currently equipped light source.
         /// </summary>
+        /// <param name="player">The target player wrapper instance.</param>
+        /// <returns><see langword="true"/> if the held light emitter is active; otherwise, <see langword="false"/>.</returns>
         public static bool GetHeldLightSourceState(this Player player)
         {
             if (player == null)
                 return false;
 
-            if (player.CurrentItem is LightItem lightItem)
+            var item = player.CurrentItem;
+            if (item == null)
+                return false;
+
+            if (item is LightItem lightItem)
                 return lightItem.IsEmitting;
 
-            if (player.CurrentItem is FirearmItem firearm && firearm.HasAttachment(AttachmentName.Flashlight))
+            if (item is FirearmItem firearm && firearm.HasAttachment(AttachmentName.Flashlight))
                 return firearm.FlashlightEnabled;
 
             return false;
         }
 
         /// <summary>
-        /// Sets the emission state of the player's held light source.
+        /// Sets the emission state of the player's currently equipped light source (standard flashlight or firearm attachment).
         /// </summary>
+        /// <param name="player">The target player wrapper instance.</param>
+        /// <param name="emit">The desired emission state.</param>
         public static void SetHeldLightSourceState(this Player player, bool emit)
         {
             if (player == null)
                 return;
 
-            if (player.CurrentItem is LightItem lightItem)
+            var item = player.CurrentItem;
+            if (item == null)
+                return;
+
+            if (item is LightItem lightItem)
             {
                 lightItem.IsEmitting = emit;
                 return;
             }
 
-            if (player.CurrentItem is FirearmItem firearm && firearm.HasAttachment(AttachmentName.Flashlight))
+            if (item is FirearmItem firearm && firearm.HasAttachment(AttachmentName.Flashlight))
             {
                 firearm.FlashlightEnabled = emit;
             }
         }
 
         /// <summary>
-        /// Sets the emission state of held light sources for multiple players with zero heap allocations.
+        /// Sets the emission state of held light sources across multiple players with zero closure heap allocations.
         /// </summary>
+        /// <param name="players">The collection of target players.</param>
+        /// <param name="emit">The desired emission state.</param>
         public static void SetHeldLightSourceState(this IEnumerable<Player> players, bool emit)
         {
             if (players == null)
                 return;
 
-            // FIX: Zero-allocation parameter-passing with static lambda.
             players.ForEach(emit, static (p, e) => p?.SetHeldLightSourceState(e));
         }
 
         /// <summary>
-        /// Sets the emission state of held light sources (params overload).
+        /// Sets the emission state of held light sources across multiple players supplied via parameter array.
         /// </summary>
+        /// <param name="emit">The desired emission state.</param>
+        /// <param name="players">The parameter array of target players.</param>
         public static void SetHeldLightSourceState(bool emit, params Player[] players)
             => players.SetHeldLightSourceState(emit);
 
@@ -97,22 +127,35 @@ namespace LabApi.Extensions
         #region Darkness & True Sensory Darkness Detection
 
         /// <summary>
-        /// Returns true if the player is in a room with lights turned off.
+        /// Determines whether the player is currently inside a room where electrical lighting is completely disabled.
         /// Fully optimized list loops bypassing struct-boxing.
         /// </summary>
+        /// <param name="player">The target player wrapper instance.</param>
+        /// <returns><see langword="true"/> if the current room has disabled light controllers; otherwise, <see langword="false"/>.</returns>
         public static bool IsInDarkRoom(this Player player)
         {
             var room = player?.Room;
             if (room == null || room.AllLightControllers == null)
                 return false;
 
-            // FIX: Direct index loops on Lights Controllers lists to bypass IEnumerable boxing allocations.
             if (room.AllLightControllers is List<LightsController> list)
             {
                 int count = list.Count;
                 for (int i = 0; i < count; i++)
                 {
                     var controller = list[i];
+                    if (controller != null && controller.LightsEnabled)
+                        return false;
+                }
+                return true;
+            }
+
+            if (room.AllLightControllers is LightsController[] array)
+            {
+                int count = array.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var controller = array[i];
                     if (controller != null && controller.LightsEnabled)
                         return false;
                 }
@@ -129,15 +172,15 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Returns true if the player is in total darkness (dark room or dark elevator cabin).
-        /// Reuses modular Player spatial extensions to minimize code duplication.
+        /// Determines whether the player is enveloped in total environmental darkness (either inside an unlit room or an unlit elevator cabin).
         /// </summary>
+        /// <param name="player">The target player wrapper instance.</param>
+        /// <returns><see langword="true"/> if the environmental enclosure is pitch dark; otherwise, <see langword="false"/>.</returns>
         public static bool IsInTrueDarkness(this Player player)
         {
             if (player == null)
                 return false;
 
-            // FIX: Secure DRY call reusing TryGetNearbyElevatorCabin from PlayerExtensions.
             if (!player.TryGetNearbyElevatorCabin(out var cabin))
                 return player.IsInDarkRoom();
 
@@ -149,8 +192,15 @@ namespace LabApi.Extensions
         #region Flicker Animations & Coroutines
 
         /// <summary>
-        /// Coroutine that flickers the player's held light source.
+        /// Executes an isolated flicker coroutine on the player's held light source.
+        /// Tracks the exact physical item instance via its unique serial number to prevent state contamination on weapon swapping.
         /// </summary>
+        /// <param name="player">The target player instance.</param>
+        /// <param name="flickerCount">The total number of state toggle intervals.</param>
+        /// <param name="delayPerFlicker">The delay between state toggles in seconds. Automatically clamped to <see cref="MinimumFlickerDelay"/>.</param>
+        /// <param name="forceOff">If set to <see langword="true"/>, the light will remain forcibly turned off upon coroutine completion.</param>
+        /// <param name="onTickFeedback">Optional callback dispatched on each tick, passing the player and whether the final force-off state has been reached.</param>
+        /// <returns>A coroutine enumerator controlling the flicker progression.</returns>
         public static IEnumerator<float> FlickerHeldLightSourceCoroutine(
             this Player player,
             int flickerCount,
@@ -161,26 +211,26 @@ namespace LabApi.Extensions
             if (player == null || player.GameObject == null)
                 yield break;
 
-            var initialType = player.CurrentItem?.GetType();
-            if (initialType == null)
+            var currentItem = player.CurrentItem;
+            if (currentItem == null)
                 yield break;
+
+            ushort initialSerial = currentItem.Serial;
+            float clampedDelay = Math.Max(delayPerFlicker, MinimumFlickerDelay);
 
             for (int i = 0; i < flickerCount; i++)
             {
-                if (!player.IsReady || !player.IsAlive || player.CurrentItem?.GetType() != initialType)
-                    break;
+                if (!player.IsReady || !player.IsAlive || player.CurrentItem?.Serial != initialSerial)
+                    yield break;
 
                 bool isLast = (i == flickerCount - 1);
                 onTickFeedback?.Invoke(player, isLast && forceOff);
 
                 player.SetHeldLightSourceState(!player.GetHeldLightSourceState());
-                yield return Timing.WaitForSeconds(delayPerFlicker);
+                yield return Timing.WaitForSeconds(clampedDelay);
             }
 
-            if (forceOff &&
-                player.IsReady &&
-                player.IsAlive &&
-                player.CurrentItem?.GetType() == initialType)
+            if (forceOff && player.IsReady && player.IsAlive && player.CurrentItem?.Serial == initialSerial)
             {
                 player.SetHeldLightSourceState(false);
                 onTickFeedback?.Invoke(player, true);
@@ -188,43 +238,53 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Starts the flicker coroutine for multiple players with zero heap allocations.
-        /// Uses ValueTuple state-passing to completely prevent closure garbage generation.
+        /// Initiates a synchronized flicker sequence on held light sources for multiple players with zero heap allocations.
+        /// Generates deterministic per-player tracking tags to eliminate coroutine race conditions.
         /// </summary>
+        /// <param name="players">The collection of target players.</param>
+        /// <param name="flickerCount">The number of flicker state changes.</param>
+        /// <param name="delayPerFlicker">Delay in seconds between state toggles.</param>
+        /// <param name="forceOff">If <see langword="true"/>, the light source is left disabled after completion.</param>
+        /// <param name="onTickFeedback">Optional per-tick callback invoked with the player and terminal status.</param>
         public static void FlickerHeldLightSource(
             this IEnumerable<Player> players,
             int flickerCount,
             float delayPerFlicker,
             bool forceOff = false,
-            Action<Player, bool> onTickFeedback = null,
-            string coroutineTag = "LabApi.Extensions-playerFlickerLights")
+            Action<Player, bool> onTickFeedback = null)
         {
             if (players == null)
                 return;
 
-            players.ForEach((flickerCount, delayPerFlicker, forceOff, onTickFeedback, coroutineTag), static (p, s) =>
+            players.ForEach((flickerCount, delayPerFlicker, forceOff, onTickFeedback), static (p, s) =>
             {
-                if (p != null)
+                if (p != null && p.IsReady && p.IsAlive)
                 {
+                    string uniqueTag = $"{PlayerFlickerTagPrefix}-{p.PlayerId}";
+                    Timing.KillCoroutines(uniqueTag);
                     Timing.RunCoroutine(
                         p.FlickerHeldLightSourceCoroutine(s.flickerCount, s.delayPerFlicker, s.forceOff, s.onTickFeedback),
-                        s.coroutineTag
+                        uniqueTag
                     );
                 }
             });
         }
 
         /// <summary>
-        /// Starts the flicker coroutine for multiple players (params overload).
+        /// Initiates a flicker sequence on held light sources for multiple players supplied via parameter array.
         /// </summary>
+        /// <param name="flickerCount">The number of flicker state changes.</param>
+        /// <param name="delayPerFlicker">Delay in seconds between state toggles.</param>
+        /// <param name="forceOff">If <see langword="true"/>, the light source is left disabled after completion.</param>
+        /// <param name="onTickFeedback">Optional per-tick callback invoked with the player and terminal status.</param>
+        /// <param name="players">The parameter array of target players.</param>
         public static void FlickerHeldLightSource(
             int flickerCount,
             float delayPerFlicker,
             bool forceOff = false,
             Action<Player, bool> onTickFeedback = null,
-            string coroutineTag = "LabApi.Extensions-playerFlickerLights",
             params Player[] players)
-            => players.FlickerHeldLightSource(flickerCount, delayPerFlicker, forceOff, onTickFeedback, coroutineTag);
+            => players.FlickerHeldLightSource(flickerCount, delayPerFlicker, forceOff, onTickFeedback);
 
         #endregion
     }

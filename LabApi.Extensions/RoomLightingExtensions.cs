@@ -1,21 +1,41 @@
 ﻿using LabApi.Features.Wrappers;
 using MEC;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Highly optimized extensions for controlling room lighting states and executing flicker animations.
-    /// Reuses core Room spatial extensions to minimize allocation paths.
+    /// Highly optimized extensions for controlling room lighting states and executing server-friendly flicker animations.
+    /// Reuses core Room spatial structures and native engine light controller pipelines to eliminate network overhead.
     /// </summary>
     public static class RoomLightingExtensions
     {
+        #region Constants & Safety Limits
+        /// <summary>
+        /// Minimum allowable frequency in Hertz to avoid zero-division and infinite delay states.
+        /// </summary>
+        public const float MinimumFrequency = 0.1f;
+
+        /// <summary>
+        /// Maximum safe frequency in Hertz. Constrains network SyncVar / RPC dispatch rates to prevent Mirror buffer saturation.
+        /// </summary>
+        public const float MaximumSafeFrequency = 1.2f;
+
+        /// <summary>
+        /// Default coroutine tag assigned to room light flicker operations.
+        /// </summary>
+        public const string DefaultFlickerTag = "LabApi.Extensions-flickerLights";
+        #endregion
+
         #region Single Room Operations
 
         /// <summary>
-        /// Turns off lights in the room for a given duration.
+        /// Turns off lights in the specified room for a set duration using the native engine flicker pipeline.
         /// </summary>
+        /// <param name="room">The target room wrapper instance.</param>
+        /// <param name="duration">The total duration in seconds for which the lights remain off.</param>
         public static void TurnOffLights(this Room room, float duration)
         {
             if (room == null || room.AllLightControllers == null)
@@ -25,8 +45,10 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Turns on lights in the room and optionally flickers them.
+        /// Turns on lights in the specified room and optionally initiates an introductory native flicker effect.
         /// </summary>
+        /// <param name="room">The target room wrapper instance.</param>
+        /// <param name="flickerDuration">The duration in seconds of the introductory native flicker effect. Defaults to 0.</param>
         public static void TurnOnLights(this Room room, float flickerDuration = 0f)
         {
             if (room == null || room.AllLightControllers == null)
@@ -36,20 +58,26 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Turns off lights in the room and its neighbors. Reuses bezalokacyjne propagation helper.
+        /// Turns off lights in the specified room and all directly adjacent neighboring rooms.
         /// </summary>
+        /// <param name="room">The origin room instance.</param>
+        /// <param name="duration">The duration in seconds during which lighting remains disabled.</param>
         public static void TurnOffRoomAndNeighborLights(this Room room, float duration) =>
             room.ExecuteActionOnRoomAndNeighbors(duration, static (r, dur) => r.TurnOffLights(dur));
 
         /// <summary>
-        /// Turns on lights in the room and its neighbors. Reuses bezalokacyjne propagation helper.
+        /// Turns on lights in the specified room and all directly adjacent neighboring rooms.
         /// </summary>
+        /// <param name="room">The origin room instance.</param>
+        /// <param name="duration">The duration in seconds for the optional startup flicker sequence.</param>
         public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f) =>
             room.ExecuteActionOnRoomAndNeighbors(duration, static (r, dur) => r.TurnOnLights(dur));
 
         /// <summary>
-        /// Sets the light color for the room.
+        /// Sets the ambient override light color for the specified room.
         /// </summary>
+        /// <param name="room">The target room instance.</param>
+        /// <param name="color">The target color spectrum applied to the room lighting controllers.</param>
         public static void SetLightsColor(this Room room, Color color)
         {
             if (room == null || room.LightController == null)
@@ -63,8 +91,10 @@ namespace LabApi.Extensions
         #region Batch Operations (Zero-Allocation via State-Passing)
 
         /// <summary>
-        /// Sets light color for multiple rooms with 0 allocations.
+        /// Applies an override light color across a collection of rooms with zero closure allocations.
         /// </summary>
+        /// <param name="rooms">The collection of target rooms.</param>
+        /// <param name="color">The color spectrum to apply.</param>
         public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
         {
             if (rooms == null)
@@ -74,14 +104,18 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Sets light color for multiple rooms (params overload).
+        /// Applies an override light color across multiple rooms supplied via parameter array.
         /// </summary>
+        /// <param name="color">The color spectrum to apply.</param>
+        /// <param name="rooms">The array of rooms to modify.</param>
         public static void SetLightsColor(Color color, params Room[] rooms) =>
             rooms.SetLightsColor(color);
 
         /// <summary>
-        /// Turns off lights for multiple rooms with 0 allocations.
+        /// Turns off lights across a collection of rooms for a specified duration with zero heap allocations.
         /// </summary>
+        /// <param name="rooms">The collection of target rooms.</param>
+        /// <param name="duration">The duration in seconds for which lights remain disabled.</param>
         public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
         {
             if (rooms == null)
@@ -91,14 +125,18 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Turns off lights for multiple rooms (params overload).
+        /// Turns off lights across multiple rooms supplied via parameter array.
         /// </summary>
+        /// <param name="duration">The duration in seconds for which lights remain disabled.</param>
+        /// <param name="rooms">The array of rooms to modify.</param>
         public static void TurnOffLights(float duration, params Room[] rooms) =>
             rooms.TurnOffLights(duration);
 
         /// <summary>
-        /// Turns on lights for multiple rooms with 0 allocations.
+        /// Turns on lights across a collection of rooms with zero heap allocations.
         /// </summary>
+        /// <param name="rooms">The collection of target rooms.</param>
+        /// <param name="flickerDuration">Optional startup flicker duration in seconds.</param>
         public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
         {
             if (rooms == null)
@@ -108,8 +146,10 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Turns on lights for multiple rooms (params overload).
+        /// Turns on lights across multiple rooms supplied via parameter array.
         /// </summary>
+        /// <param name="flickerDuration">Optional startup flicker duration in seconds.</param>
+        /// <param name="rooms">The array of rooms to modify.</param>
         public static void TurnOnLights(float flickerDuration, params Room[] rooms) =>
             rooms.TurnOnLights(flickerDuration);
 
@@ -118,104 +158,115 @@ namespace LabApi.Extensions
         #region Flicker Animations & Coroutines
 
         /// <summary>
-        /// Executes a flicker animation on the room lights with 0 array allocation in standard lists/arrays.
+        /// Executes a synchronized native pulse flicker animation across an individual room.
+        /// Utilizes the native engine light controller pipelines and clamps dispatch frequency to preserve server TPS.
         /// </summary>
+        /// <param name="room">The target room to animate.</param>
+        /// <param name="color">The ambient override color applied during the flicker sequence.</param>
+        /// <param name="duration">The total lifetime of the flicker sequence in seconds.</param>
+        /// <param name="frequency">The desired cadence frequency in Hertz. Automatically clamped between <see cref="MinimumFrequency"/> and <see cref="MaximumSafeFrequency"/>.</param>
+        /// <returns>A coroutine enumerator managing the temporal pulse progression.</returns>
         public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
         {
-            if (room == null || room.AllLightControllers == null)
+            if (room == null)
                 yield break;
 
-            float interval = 1f / frequency.LimitMin(0.1f);
-            float half = interval * 0.5f;
-            int flickers = (int)(duration / interval);
-
-            room.SetLightsColor(color);
-
-            // FIX: Prevent array allocation and copying inside the coroutine loop for common collections.
-            if (room.AllLightControllers is List<LightsController> list)
-            {
-                int count = list.Count;
-                for (int i = 0; i < flickers; i++)
-                {
-                    for (int c = 0; c < count; c++)
-                        list[c].LightsEnabled = false;
-
-                    yield return Timing.WaitForSeconds(half);
-
-                    for (int c = 0; c < count; c++)
-                        list[c].LightsEnabled = true;
-
-                    yield return Timing.WaitForSeconds(half);
-                }
-            }
-            else if (room.AllLightControllers is LightsController[] array)
-            {
-                int count = array.Length;
-                for (int i = 0; i < flickers; i++)
-                {
-                    for (int c = 0; c < count; c++)
-                        array[c].LightsEnabled = false;
-
-                    yield return Timing.WaitForSeconds(half);
-
-                    for (int c = 0; c < count; c++)
-                        array[c].LightsEnabled = true;
-
-                    yield return Timing.WaitForSeconds(half);
-                }
-            }
-            else
-            {
-                // Fallback for general IEnumerable (extremely rare)
-                var fallbackList = new List<LightsController>(room.AllLightControllers);
-                int count = fallbackList.Count;
-                for (int i = 0; i < flickers; i++)
-                {
-                    for (int c = 0; c < count; c++)
-                        fallbackList[c].LightsEnabled = false;
-
-                    yield return Timing.WaitForSeconds(half);
-
-                    for (int c = 0; c < count; c++)
-                        fallbackList[c].LightsEnabled = true;
-
-                    yield return Timing.WaitForSeconds(half);
-                }
-            }
-
-            room.SetLightsColor(Color.clear);
+            yield return Timing.WaitUntilDone(Timing.RunCoroutine(new[] { room }.FlickerLightsBatchCoroutine(color, duration, frequency)));
         }
 
         /// <summary>
-        /// Starts a flicker animation on multiple rooms with 0 allocations.
+        /// Executes a unified, single-coroutine batch pulse flicker animation across multiple rooms.
+        /// Enforces native engine light triggers at the specified cadence while shielding the Mirror networking pipeline from packet saturation.
         /// </summary>
+        /// <param name="rooms">The collection of rooms to animate.</param>
+        /// <param name="color">The ambient override color active throughout the sequence.</param>
+        /// <param name="duration">Total animation lifetime in seconds.</param>
+        /// <param name="frequency">The rhythm frequency in Hertz. Clamped internally to protect network buffers.</param>
+        /// <returns>A unified coroutine enumerator controlling all target room lights simultaneously.</returns>
+        public static IEnumerator<float> FlickerLightsBatchCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
+        {
+            if (rooms == null || duration <= 0f)
+                yield break;
+
+            List<Room> targetRooms = rooms as List<Room> ?? new List<Room>(rooms);
+            int roomCount = targetRooms.Count;
+            if (roomCount == 0)
+                yield break;
+
+            float clampedFrequency = Mathf.Clamp(frequency, MinimumFrequency, MaximumSafeFrequency);
+            float interval = 1f / clampedFrequency;
+            float pulseDuration = Mathf.Min(interval * 0.45f, 0.6f);
+
+            // Step 1: Initialize override color across all target rooms
+            for (int r = 0; r < roomCount; r++)
+            {
+                targetRooms[r]?.SetLightsColor(color);
+            }
+
+            float elapsedTime = 0f;
+
+            // Step 2: Periodic native pulse loop tracking the requested frequency cadence
+            while (elapsedTime < duration)
+            {
+                float remainingTime = duration - elapsedTime;
+                float currentPulse = Mathf.Min(pulseDuration, remainingTime);
+
+                for (int r = 0; r < roomCount; r++)
+                {
+                    Room room = targetRooms[r];
+                    if (room?.AllLightControllers == null)
+                        continue;
+
+                    room.AllLightControllers.ForEach(currentPulse, static (lc, pDur) => lc.FlickerLights(pDur));
+                }
+
+                float sleepDuration = Mathf.Min(interval, remainingTime);
+                elapsedTime += sleepDuration;
+
+                yield return Timing.WaitForSeconds(sleepDuration);
+            }
+
+            // Step 3: Revert light override color to baseline default
+            for (int r = 0; r < roomCount; r++)
+            {
+                targetRooms[r]?.SetLightsColor(Color.clear);
+            }
+        }
+
+        /// <summary>
+        /// Initiates a synchronized, low-overhead native flicker animation across multiple rooms using a single centralized coroutine.
+        /// </summary>
+        /// <param name="rooms">The collection of target rooms undergoing visual containment disruption.</param>
+        /// <param name="color">The override color displayed during active flicker intervals.</param>
+        /// <param name="duration">The operational window of the flicker effect in seconds.</param>
+        /// <param name="frequency">The pulse cadence in Hertz. Clamped to safe thresholds to guarantee packet stability.</param>
+        /// <param name="coroutineTag">MEC tracking tag used to manage or cancel active coroutine pipelines.</param>
         public static void FlickerLights(
             this IEnumerable<Room> rooms,
             Color color,
             float duration,
             float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights")
+            string coroutineTag = DefaultFlickerTag)
         {
             if (rooms == null)
                 return;
 
-            rooms.ForEach((color, duration, frequency, coroutineTag), static (r, s) =>
-            {
-                if (r != null)
-                {
-                    Timing.RunCoroutine(r.FlickerLightsCoroutine(s.color, s.duration, s.frequency), s.coroutineTag);
-                }
-            });
+            Timing.RunCoroutine(rooms.FlickerLightsBatchCoroutine(color, duration, frequency), coroutineTag);
         }
 
         /// <summary>
-        /// Starts a flicker animation on multiple rooms (params overload).
+        /// Initiates a synchronized native flicker animation across multiple rooms supplied via parameter array.
         /// </summary>
+        /// <param name="color">The override color displayed during active flicker intervals.</param>
+        /// <param name="duration">The operational window of the flicker effect in seconds.</param>
+        /// <param name="frequency">The pulse cadence in Hertz.</param>
+        /// <param name="coroutineTag">MEC tracking tag used to manage or cancel active coroutine pipelines.</param>
+        /// <param name="rooms">The parameter array of target rooms.</param>
         public static void FlickerLights(
             Color color,
             float duration,
             float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights",
+            string coroutineTag = DefaultFlickerTag,
             params Room[] rooms) =>
             rooms.FlickerLights(color, duration, frequency, coroutineTag);
 

@@ -2,21 +2,24 @@
 using MapGeneration;
 using MEC;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Highly optimized utility extensions for controlling lighting states and playing animations in <see cref="FacilityZone"/>.
-    /// Features zero-allocation state-passing batch operations.
+    /// Highly optimized utility extensions for controlling lighting states and executing synchronized animations in <see cref="FacilityZone"/>.
+    /// Leverages underlying room pipeline extensions and native engine controllers with zero closure garbage.
     /// </summary>
     public static class ZoneLightingExtensions
     {
         #region Single-Zone Lights
 
         /// <summary>
-        /// Turns off lights in the zone and its elevators with zero heap allocations.
+        /// Turns off lights across the specified zone and its connected elevator shafts with zero heap allocations.
         /// </summary>
+        /// <param name="zone">The target facility zone.</param>
+        /// <param name="duration">The duration in seconds during which lights remain deactivated.</param>
         public static void TurnOffLights(this FacilityZone zone, float duration)
         {
             Map.TurnOffLights(duration, zone);
@@ -24,7 +27,6 @@ namespace LabApi.Extensions
             if (Elevator.List == null)
                 return;
 
-            // FIX: Direct loop bypassing obsolete GetElevators() and reusing ElevatorLightingExtensions!
             Elevator.List.ForEach((zone, duration), static (e, state) =>
             {
                 if (e != null && ZoneExtensions.IsElevatorInZone(e, state.zone))
@@ -35,8 +37,9 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Turns on lights in the zone and its elevators with zero heap allocations.
+        /// Restores lights across the specified zone and its connected elevator shafts with zero heap allocations.
         /// </summary>
+        /// <param name="zone">The target facility zone.</param>
         public static void TurnOnLights(this FacilityZone zone)
         {
             Map.TurnOnLights(zone);
@@ -44,7 +47,6 @@ namespace LabApi.Extensions
             if (Elevator.List == null)
                 return;
 
-            // FIX: Direct loop bypassing obsolete GetElevators() and reusing ElevatorLightingExtensions!
             Elevator.List.ForEach(zone, static (e, z) =>
             {
                 if (e != null && ZoneExtensions.IsElevatorInZone(e, z))
@@ -59,20 +61,23 @@ namespace LabApi.Extensions
         #region Multi-Zone Lights (IEnumerable + params)
 
         /// <summary>
-        /// Turns off lights across multiple zones with zero heap allocations.
+        /// Turns off lights across multiple facility zones with zero heap allocations.
         /// </summary>
+        /// <param name="zones">The collection of target zones.</param>
+        /// <param name="duration">The duration in seconds for which lights remain deactivated.</param>
         public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
         {
             if (zones == null)
                 return;
 
-            // FIX: Enforced state-passing and static lambda to prevent closure garbage generation.
             zones.ForEach(duration, static (z, dur) => z.TurnOffLights(dur));
         }
 
         /// <summary>
-        /// Turns off lights across multiple zones (params overload).
+        /// Turns off lights across multiple facility zones supplied via parameter array.
         /// </summary>
+        /// <param name="duration">The duration in seconds for which lights remain deactivated.</param>
+        /// <param name="zones">The array of target zones.</param>
         public static void TurnOffLights(float duration, params FacilityZone[] zones)
         {
             if (zones == null)
@@ -82,20 +87,21 @@ namespace LabApi.Extensions
         }
 
         /// <summary>
-        /// Turns on lights across multiple zones with zero heap allocations.
+        /// Restores lights across multiple facility zones with zero heap allocations.
         /// </summary>
+        /// <param name="zones">The collection of target zones.</param>
         public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
         {
             if (zones == null)
                 return;
 
-            // FIX: Enforced static delegate caching to achieve 0 allocations.
             zones.ForEach(static z => z.TurnOnLights());
         }
 
         /// <summary>
-        /// Turns on lights across multiple zones (params overload).
+        /// Restores lights across multiple facility zones supplied via parameter array.
         /// </summary>
+        /// <param name="zones">The array of target zones.</param>
         public static void TurnOnLights(params FacilityZone[] zones)
         {
             if (zones == null)
@@ -109,58 +115,65 @@ namespace LabApi.Extensions
         #region Zone Animations (Unified Flicker)
 
         /// <summary>
-        /// Performs a flicker animation on zone lights.
+        /// Executes a synchronized native pulse flicker animation across all rooms within a specified zone.
+        /// Reuses <see cref="RoomLightingExtensions.FlickerLightsBatchCoroutine"/> to enforce DRY and guarantee network safety.
         /// </summary>
+        /// <param name="zone">The target facility zone.</param>
+        /// <param name="color">The override color applied during the animation window.</param>
+        /// <param name="duration">Total animation lifetime in seconds.</param>
+        /// <param name="frequency">Cadence frequency in Hertz. Clamped internally to prevent Mirror network buffer overflow.</param>
+        /// <returns>A coroutine enumerator controlling the zone-wide pulse progression.</returns>
         public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
         {
-            float interval = 1f / frequency.LimitMin(0.1f);
-            float half = interval * 0.5f;
-            int flickers = (int)(duration / interval);
+            List<Room> zoneRooms = Room.List.Where(r => r != null && r.Zone == zone).ToList();
+            if (zoneRooms.Count == 0)
+                yield break;
 
-            Map.SetColorOfLights(color, zone);
-
-            for (int i = 0; i < flickers; i++)
-            {
-                Map.TurnOffLights(half, zone);
-                yield return Timing.WaitForSeconds(half);
-
-                Map.TurnOnLights(zone);
-                yield return Timing.WaitForSeconds(half);
-            }
-
-            Map.ResetColorOfLights(zone);
+            yield return Timing.WaitUntilDone(Timing.RunCoroutine(zoneRooms.FlickerLightsBatchCoroutine(color, duration, frequency)));
         }
 
         /// <summary>
-        /// Starts a flicker animation on multiple zones with zero heap allocations.
+        /// Initiates a synchronized, low-overhead native flicker animation across multiple facility zones using a single centralized coroutine.
         /// </summary>
+        /// <param name="zones">The collection of target zones undergoing lockdown flicker disruption.</param>
+        /// <param name="color">The override color applied during the animation sequence.</param>
+        /// <param name="duration">The duration in seconds for the active animation window.</param>
+        /// <param name="frequency">The cadence frequency in Hertz. Automatically clamped to network-safe bounds.</param>
+        /// <param name="coroutineTag">MEC tracking tag used to cancel or manage active animation coroutines.</param>
         public static void FlickerLights(
             this IEnumerable<FacilityZone> zones,
             Color color,
             float duration,
             float frequency,
-            string coroutineTag = "LabApi.Extensions-flickerLights")
+            string coroutineTag = RoomLightingExtensions.DefaultFlickerTag)
         {
             if (zones == null)
                 return;
 
-            // FIX: State-passing value tuple to launch multiple coroutines without closure allocations.
-            zones.ForEach((color, duration, frequency, coroutineTag), static (z, s) =>
+            HashSet<FacilityZone> zoneSet = zones as HashSet<FacilityZone> ?? new HashSet<FacilityZone>(zones);
+            List<Room> targetRooms = Room.List.Where(r => r != null && zoneSet.Contains(r.Zone)).ToList();
+
+            if (targetRooms.Count > 0)
             {
-                Timing.RunCoroutine(z.FlickerLightsCoroutine(s.color, s.duration, s.frequency), s.coroutineTag);
-            });
+                targetRooms.FlickerLights(color, duration, frequency, coroutineTag);
+            }
         }
 
         /// <summary>
-        /// Starts a flicker animation on multiple zones (params overload).
+        /// Initiates a synchronized native flicker animation across multiple facility zones supplied via parameter array.
         /// </summary>
+        /// <param name="color">The override color applied during the animation sequence.</param>
+        /// <param name="duration">The duration in seconds for the active animation window.</param>
+        /// <param name="frequency">The cadence frequency in Hertz.</param>
+        /// <param name="coroutineTag">MEC tracking tag used to cancel or manage active animation coroutines.</param>
+        /// <param name="zones">The parameter array of target zones.</param>
         public static void FlickerLights(
             Color color,
             float duration,
             float frequency,
-            string @coroutineTag = "LabApi.Extensions-flickerLights",
-            params FacilityZone[] zones)
-            => zones.FlickerLights(color, duration, frequency, coroutineTag);
+            string coroutineTag = RoomLightingExtensions.DefaultFlickerTag,
+            params FacilityZone[] zones) =>
+            zones.FlickerLights(color, duration, frequency, coroutineTag);
 
         #endregion
     }

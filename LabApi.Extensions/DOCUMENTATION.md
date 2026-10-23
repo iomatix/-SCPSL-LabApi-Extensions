@@ -1100,64 +1100,76 @@ public static bool TryResolveFuzzy(this IEnumerable<Player> players, string iden
 
 ## 📦 Class: PlayerLightingExtensions
 
+### 🔹 `UnknownMember`
+**Description:** Base prefix applied to player-specific light flicker coroutine tracking tags.
+```csharp
+public const string PlayerFlickerTagPrefix = "LabApi.Extensions-playerFlickerLights";
+```
+
+### 🔹 `05f`
+**Description:** Absolute minimum safe delay in seconds enforced between successive light flicker pulses to prevent Mirror packet flooding.
+```csharp
+public const float MinimumFlickerDelay = 0.05f;
+```
+
 ### 🔹 `HasActiveLightSource()`
-**Description:** Returns true if the player's held item emits light (flashlight or light item).
+**Description:** Determines whether the player's currently held item is an active, emitting light source (e.g., powered flashlight or enabled firearm attachment).
 ```csharp
 public static bool HasActiveLightSource(this Player player)
 ```
 
 ### 🔹 `GetHeldLightSourceState()`
-**Description:** Returns true if the player's held light source is currently emitting.
+**Description:** Retrieves the emission state of the player's currently equipped light source.
 ```csharp
 public static bool GetHeldLightSourceState(this Player player)
 ```
 
 ### 🔹 `SetHeldLightSourceState()`
-**Description:** Sets the emission state of the player's held light source.
+**Description:** Sets the emission state of the player's currently equipped light source (standard flashlight or firearm attachment).
 ```csharp
 public static void SetHeldLightSourceState(this Player player, bool emit)
 ```
 
 ### 🔹 `SetHeldLightSourceState()`
-**Description:** Sets the emission state of held light sources for multiple players with zero heap allocations.
+**Description:** Sets the emission state of held light sources across multiple players with zero closure heap allocations.
 ```csharp
 public static void SetHeldLightSourceState(this IEnumerable<Player> players, bool emit)
 ```
 
 ### 🔹 `SetHeldLightSourceState()`
-**Description:** Sets the emission state of held light sources (params overload).
+**Description:** Sets the emission state of held light sources across multiple players supplied via parameter array.
 ```csharp
 public static void SetHeldLightSourceState(bool emit, params Player[] players) => players.SetHeldLightSourceState(emit);
 ```
 
 ### 🔹 `IsInDarkRoom()`
-**Description:** Returns true if the player is in a room with lights turned off. Fully optimized list loops bypassing struct-boxing.
+**Description:** Determines whether the player is currently inside a room where electrical lighting is completely disabled. Fully optimized list loops bypassing struct-boxing.
 ```csharp
 public static bool IsInDarkRoom(this Player player)
 ```
 
 ### 🔹 `IsInTrueDarkness()`
-**Description:** Returns true if the player is in total darkness (dark room or dark elevator cabin). Reuses modular Player spatial extensions to minimize code duplication.
+**Description:** Determines whether the player is enveloped in total environmental darkness (either inside an unlit room or an unlit elevator cabin).
 ```csharp
 public static bool IsInTrueDarkness(this Player player)
 ```
 
 ### 🔹 `FlickerHeldLightSourceCoroutine()`
-**Description:** Coroutine that flickers the player's held light source.
+**Description:** Executes an isolated flicker coroutine on the player's held light source. Tracks the exact physical item instance via its unique serial number to prevent state contamination on weapon swapping.
 ```csharp
 public static IEnumerator<float> FlickerHeldLightSourceCoroutine( this Player player, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
 ```
 
 ### 🔹 `FlickerHeldLightSource()`
-**Description:** Starts the flicker coroutine for multiple players with zero heap allocations. Uses ValueTuple state-passing to completely prevent closure garbage generation.
+**Description:** Initiates a synchronized flicker sequence on held light sources for multiple players with zero heap allocations. Generates deterministic per-player tracking tags to eliminate coroutine race conditions.
 ```csharp
-public static void FlickerHeldLightSource( this IEnumerable<Player> players, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, string coroutineTag = "LabApi.Extensions-playerFlickerLights")
+public static void FlickerHeldLightSource( this IEnumerable<Player> players, int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null)
 ```
 
 ### 🔹 `FlickerHeldLightSource()`
-**Description:** Starts the flicker coroutine for multiple players (params overload).
+**Description:** Initiates a flicker sequence on held light sources for multiple players supplied via parameter array.
 ```csharp
-public static void FlickerHeldLightSource( int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, string coroutineTag = "LabApi.Extensions-playerFlickerLights", params Player[] players) => players.FlickerHeldLightSource(flickerCount, delayPerFlicker, forceOff, onTickFeedback, coroutineTag);
+public static void FlickerHeldLightSource( int flickerCount, float delayPerFlicker, bool forceOff = false, Action<Player, bool> onTickFeedback = null, params Player[] players) => players.FlickerHeldLightSource(flickerCount, delayPerFlicker, forceOff, onTickFeedback);
 ```
 
 ---
@@ -1300,88 +1312,112 @@ public static bool IsWithinRadius(this Room room, Vector3 position, float radius
 
 ## 📦 Class: RoomLightingExtensions
 
+### 🔹 `1f`
+**Description:** Minimum allowable frequency in Hertz to avoid zero-division and infinite delay states.
+```csharp
+public const float MinimumFrequency = 0.1f;
+```
+
+### 🔹 `2f`
+**Description:** Maximum safe frequency in Hertz. Constrains network SyncVar / RPC dispatch rates to prevent Mirror buffer saturation.
+```csharp
+public const float MaximumSafeFrequency = 1.2f;
+```
+
+### 🔹 `UnknownMember`
+**Description:** Default coroutine tag assigned to room light flicker operations.
+```csharp
+public const string DefaultFlickerTag = "LabApi.Extensions-flickerLights";
+```
+
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights in the room for a given duration.
+**Description:** Turns off lights in the specified room for a set duration using the native engine flicker pipeline.
 ```csharp
 public static void TurnOffLights(this Room room, float duration)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights in the room and optionally flickers them.
+**Description:** Turns on lights in the specified room and optionally initiates an introductory native flicker effect.
 ```csharp
 public static void TurnOnLights(this Room room, float flickerDuration = 0f)
 ```
 
 ### 🔹 `TurnOffRoomAndNeighborLights()`
-**Description:** Turns off lights in the room and its neighbors. Reuses bezalokacyjne propagation helper.
+**Description:** Turns off lights in the specified room and all directly adjacent neighboring rooms.
 ```csharp
 public static void TurnOffRoomAndNeighborLights(this Room room, float duration) => room.ExecuteActionOnRoomAndNeighbors(duration, static (r, dur) => r.TurnOffLights(dur));
 ```
 
 ### 🔹 `TurnOnRoomAndNeighborLights()`
-**Description:** Turns on lights in the room and its neighbors. Reuses bezalokacyjne propagation helper.
+**Description:** Turns on lights in the specified room and all directly adjacent neighboring rooms.
 ```csharp
 public static void TurnOnRoomAndNeighborLights(this Room room, float duration = 0f) => room.ExecuteActionOnRoomAndNeighbors(duration, static (r, dur) => r.TurnOnLights(dur));
 ```
 
 ### 🔹 `SetLightsColor()`
-**Description:** Sets the light color for the room.
+**Description:** Sets the ambient override light color for the specified room.
 ```csharp
 public static void SetLightsColor(this Room room, Color color)
 ```
 
 ### 🔹 `SetLightsColor()`
-**Description:** Sets light color for multiple rooms with 0 allocations.
+**Description:** Applies an override light color across a collection of rooms with zero closure allocations.
 ```csharp
 public static void SetLightsColor(this IEnumerable<Room> rooms, Color color)
 ```
 
 ### 🔹 `SetLightsColor()`
-**Description:** Sets light color for multiple rooms (params overload).
+**Description:** Applies an override light color across multiple rooms supplied via parameter array.
 ```csharp
 public static void SetLightsColor(Color color, params Room[] rooms) => rooms.SetLightsColor(color);
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights for multiple rooms with 0 allocations.
+**Description:** Turns off lights across a collection of rooms for a specified duration with zero heap allocations.
 ```csharp
 public static void TurnOffLights(this IEnumerable<Room> rooms, float duration)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights for multiple rooms (params overload).
+**Description:** Turns off lights across multiple rooms supplied via parameter array.
 ```csharp
 public static void TurnOffLights(float duration, params Room[] rooms) => rooms.TurnOffLights(duration);
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights for multiple rooms with 0 allocations.
+**Description:** Turns on lights across a collection of rooms with zero heap allocations.
 ```csharp
 public static void TurnOnLights(this IEnumerable<Room> rooms, float flickerDuration = 0f)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights for multiple rooms (params overload).
+**Description:** Turns on lights across multiple rooms supplied via parameter array.
 ```csharp
 public static void TurnOnLights(float flickerDuration, params Room[] rooms) => rooms.TurnOnLights(flickerDuration);
 ```
 
 ### 🔹 `FlickerLightsCoroutine()`
-**Description:** Executes a flicker animation on the room lights with 0 array allocation in standard lists/arrays.
+**Description:** Executes a synchronized native pulse flicker animation across an individual room. Utilizes the native engine light controller pipelines and clamps dispatch frequency to preserve server TPS.
 ```csharp
 public static IEnumerator<float> FlickerLightsCoroutine(this Room room, Color color, float duration, float frequency)
 ```
 
-### 🔹 `FlickerLights()`
-**Description:** Starts a flicker animation on multiple rooms with 0 allocations.
+### 🔹 `FlickerLightsBatchCoroutine()`
+**Description:** Executes a unified, single-coroutine batch pulse flicker animation across multiple rooms. Enforces native engine light triggers at the specified cadence while shielding the Mirror networking pipeline from packet saturation.
 ```csharp
-public static void FlickerLights( this IEnumerable<Room> rooms, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights")
+public static IEnumerator<float> FlickerLightsBatchCoroutine(this IEnumerable<Room> rooms, Color color, float duration, float frequency)
 ```
 
 ### 🔹 `FlickerLights()`
-**Description:** Starts a flicker animation on multiple rooms (params overload).
+**Description:** Initiates a synchronized, low-overhead native flicker animation across multiple rooms using a single centralized coroutine.
 ```csharp
-public static void FlickerLights( Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights", params Room[] rooms) => rooms.FlickerLights(color, duration, frequency, coroutineTag);
+public static void FlickerLights( this IEnumerable<Room> rooms, Color color, float duration, float frequency, string coroutineTag = DefaultFlickerTag)
+```
+
+### 🔹 `FlickerLights()`
+**Description:** Initiates a synchronized native flicker animation across multiple rooms supplied via parameter array.
+```csharp
+public static void FlickerLights( Color color, float duration, float frequency, string coroutineTag = DefaultFlickerTag, params Room[] rooms) => rooms.FlickerLights(color, duration, frequency, coroutineTag);
 ```
 
 ---
@@ -1625,57 +1661,57 @@ public static IEnumerable<Elevator> GetElevatorsInZone(FacilityZone zone) => zon
 ## 📦 Class: ZoneLightingExtensions
 
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights in the zone and its elevators with zero heap allocations.
+**Description:** Turns off lights across the specified zone and its connected elevator shafts with zero heap allocations.
 ```csharp
 public static void TurnOffLights(this FacilityZone zone, float duration)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights in the zone and its elevators with zero heap allocations.
+**Description:** Restores lights across the specified zone and its connected elevator shafts with zero heap allocations.
 ```csharp
 public static void TurnOnLights(this FacilityZone zone)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights across multiple zones with zero heap allocations.
+**Description:** Turns off lights across multiple facility zones with zero heap allocations.
 ```csharp
 public static void TurnOffLights(this IEnumerable<FacilityZone> zones, float duration)
 ```
 
 ### 🔹 `TurnOffLights()`
-**Description:** Turns off lights across multiple zones (params overload).
+**Description:** Turns off lights across multiple facility zones supplied via parameter array.
 ```csharp
 public static void TurnOffLights(float duration, params FacilityZone[] zones)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights across multiple zones with zero heap allocations.
+**Description:** Restores lights across multiple facility zones with zero heap allocations.
 ```csharp
 public static void TurnOnLights(this IEnumerable<FacilityZone> zones)
 ```
 
 ### 🔹 `TurnOnLights()`
-**Description:** Turns on lights across multiple zones (params overload).
+**Description:** Restores lights across multiple facility zones supplied via parameter array.
 ```csharp
 public static void TurnOnLights(params FacilityZone[] zones)
 ```
 
 ### 🔹 `FlickerLightsCoroutine()`
-**Description:** Performs a flicker animation on zone lights.
+**Description:** Executes a synchronized native pulse flicker animation across all rooms within a specified zone. Reuses <see cref="RoomLightingExtensions.FlickerLightsBatchCoroutine"/> to enforce DRY and guarantee network safety.
 ```csharp
 public static IEnumerator<float> FlickerLightsCoroutine(this FacilityZone zone, Color color, float duration, float frequency)
 ```
 
 ### 🔹 `FlickerLights()`
-**Description:** Starts a flicker animation on multiple zones with zero heap allocations.
+**Description:** Initiates a synchronized, low-overhead native flicker animation across multiple facility zones using a single centralized coroutine.
 ```csharp
-public static void FlickerLights( this IEnumerable<FacilityZone> zones, Color color, float duration, float frequency, string coroutineTag = "LabApi.Extensions-flickerLights")
+public static void FlickerLights( this IEnumerable<FacilityZone> zones, Color color, float duration, float frequency, string coroutineTag = RoomLightingExtensions.DefaultFlickerTag)
 ```
 
 ### 🔹 `FlickerLights()`
-**Description:** Starts a flicker animation on multiple zones (params overload).
+**Description:** Initiates a synchronized native flicker animation across multiple facility zones supplied via parameter array.
 ```csharp
-public static void FlickerLights( Color color, float duration, float frequency, string @coroutineTag = "LabApi.Extensions-flickerLights", params FacilityZone[] zones) => zones.FlickerLights(color, duration, frequency, coroutineTag);
+public static void FlickerLights( Color color, float duration, float frequency, string coroutineTag = RoomLightingExtensions.DefaultFlickerTag, params FacilityZone[] zones) => zones.FlickerLights(color, duration, frequency, coroutineTag);
 ```
 
 ---
