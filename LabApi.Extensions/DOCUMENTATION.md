@@ -1,38 +1,4 @@
-# Company.PluginProject - Architecture API Registry
-
-## 📦 Class: `Config`
-
-### 🔹 `Validate()`
-**Description:** Validates core plugin settings.
-```csharp
-public void Validate()
-```
-
----
-
-## 📦 Class: `ExiledCompatibilityLayer`
-
-Advanced cross-platform compatibility engine that bridges legacy EXILED configurations with the LabAPI architecture using native OS reparse points or runtime mirroring fail-safes.
-
-### 🔹 `ExecuteFallback()`
-**Description:** Executes the synchronization fallback to bridge directories and load missing configurations.
-```csharp
-public static void ExecuteFallback(Plugin plugin)
-```
-
----
-
-## 📦 Class: `ExiledCompatibilityLayer`
-
-Advanced cross-platform compatibility engine that bridges legacy EXILED configurations with the LabAPI architecture using native OS reparse points or runtime mirroring fail-safes.
-
-### 🔹 `ExecuteFallback()`
-**Description:** Executes the synchronization fallback to bridge directories and load missing configurations.
-```csharp
-public static void ExecuteFallback(Plugin plugin)
-```
-
----
+# LabApi.Extensions - Architecture API Registry
 
 ## 📦 Struct: `ChainNode<T>`
 
