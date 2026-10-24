@@ -2,13 +2,71 @@
 using MEC;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LabApi.Extensions
 {
     /// <summary>
-    /// Highly optimized extensions for controlling room lighting states and executing server-friendly flicker animations.
-    /// Reuses core Room spatial structures and native engine light controller pipelines to eliminate network overhead.
+    /// Represents an immutable, zero-allocation snapshot capturing a room's physical power status and active color override.
+    /// Used by automated orchestration systems to preserve ambient lighting states across transient facility disruptions.
+    /// </summary>
+    public readonly struct RoomLightSnapshot : IEquatable<RoomLightSnapshot>
+    {
+        /// <summary>
+        /// Gets the active ambient override light color at the time the snapshot was taken.
+        /// Evaluates to <see cref="Color.clear"/> if default room profile lighting was active.
+        /// </summary>
+        public Color OverrideColor { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the electrical grid feeding the room light controller was active and powered.
+        /// Evaluates to <see langword="false"/> if lights were disabled by a blackout, EMP, or containment surge.
+        /// </summary>
+        public bool IsPowered { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RoomLightSnapshot"/> struct.
+        /// </summary>
+        /// <param name="overrideColor">The captured override color spectrum.</param>
+        /// <param name="isPowered">Whether the room light infrastructure was actively powered.</param>
+        public RoomLightSnapshot(Color overrideColor, bool isPowered)
+        {
+            OverrideColor = overrideColor;
+            IsPowered = isPowered;
+        }
+
+        /// <inheritdoc />
+        public bool Equals(RoomLightSnapshot other) =>
+            OverrideColor.Equals(other.OverrideColor) && IsPowered == other.IsPowered;
+
+        /// <inheritdoc />
+        public override bool Equals(object obj) =>
+            obj is RoomLightSnapshot other && Equals(other);
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (OverrideColor.GetHashCode() * 397) ^ IsPowered.GetHashCode();
+            }
+        }
+
+        /// <summary>
+        /// Checks two <see cref="RoomLightSnapshot"/> structures for equality.
+        /// </summary>
+        public static bool operator ==(RoomLightSnapshot left, RoomLightSnapshot right) => left.Equals(right);
+
+        /// <summary>
+        /// Checks two <see cref="RoomLightSnapshot"/> structures for inequality.
+        /// </summary>
+        public static bool operator !=(RoomLightSnapshot left, RoomLightSnapshot right) => !left.Equals(right);
+    }
+
+    /// <summary>
+    /// Highly optimized extensions for controlling room lighting states, executing server-friendly flicker animations,
+    /// and inspecting electrical grid telemetry without allocations.
     /// </summary>
     public static class RoomLightingExtensions
     {
@@ -27,6 +85,89 @@ namespace LabApi.Extensions
         /// Default coroutine tag assigned to room light flicker operations.
         /// </summary>
         public const string DefaultFlickerTag = "LabApi.Extensions-flickerLights";
+        #endregion
+
+        #region Telemetry & State Inspection
+
+        /// <summary>
+        /// Verifies whether the lighting infrastructure in the specified room currently has active electrical power.
+        /// </summary>
+        /// <param name="room">The target room wrapper instance.</param>
+        /// <returns>
+        /// <see langword="true"/> if at least one light controller in the room reports active power feed (<see cref="LightsController.LightsEnabled"/> is <see langword="true"/>);
+        /// otherwise, <see langword="false"/> (indicating an active blackout from anomalies such as SCP-575, SCP-079, or warhead surges).
+        /// </returns>
+        public static bool IsLightingPowered(this Room room)
+        {
+            if (room?.AllLightControllers == null)
+                return false;
+
+            foreach (var controller in room.AllLightControllers)
+            {
+                if (controller != null && controller.LightsEnabled)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Retrieves the current ambient override light color assigned to the specified room.
+        /// </summary>
+        /// <param name="room">The target room wrapper instance.</param>
+        /// <returns>
+        /// The currently active <see cref="Color"/> override, or <see cref="Color.clear"/> if no custom spectrum is applied or no controllers exist.
+        /// </returns>
+        public static Color GetOverrideLightsColor(this Room room)
+        {
+            if (room == null || room.LightController == null)
+                return Color.clear;
+
+            return room.LightController.OverrideLightsColor;
+        }
+
+        /// <summary>
+        /// Captures an atomic, zero-heap-allocation snapshot of the room's current electrical and color override state.
+        /// </summary>
+        /// <param name="room">The target room instance to sample.</param>
+        /// <returns>A stack-allocated <see cref="RoomLightSnapshot"/> structure representing current lighting parameters.</returns>
+        public static RoomLightSnapshot CaptureLightSnapshot(this Room room)
+        {
+            if (room == null || room.LightController == null)
+                return new RoomLightSnapshot(Color.clear, isPowered: false);
+
+            return new RoomLightSnapshot(room.LightController.OverrideLightsColor, room.IsLightingPowered());
+        }
+
+        /// <summary>
+        /// Restores a room's ambient light override color to match a previously sampled <see cref="RoomLightSnapshot"/>.
+        /// Note: This method purposely preserves existing blackout conditions and does NOT force lights on if the grid remains unpowered.
+        /// </summary>
+        /// <param name="room">The target room instance to restore.</param>
+        /// <param name="snapshot">The source snapshot containing the target override color profile.</param>
+        public static void RestoreLightSnapshot(this Room room, RoomLightSnapshot snapshot)
+        {
+            if (room == null || room.LightController == null)
+                return;
+
+            room.LightController.OverrideLightsColor = snapshot.OverrideColor;
+        }
+
+        /// <summary>
+        /// Restores ambient light override colors across a collection of paired rooms and snapshots with zero delegate allocations.
+        /// </summary>
+        /// <param name="snapshots">A collection of key-value pairs linking rooms to their respective snapshots.</param>
+        public static void RestoreLightSnapshots(this IEnumerable<KeyValuePair<Room, RoomLightSnapshot>> snapshots)
+        {
+            if (snapshots == null)
+                return;
+
+            foreach (var kvp in snapshots)
+            {
+                kvp.Key?.RestoreLightSnapshot(kvp.Value);
+            }
+        }
+
         #endregion
 
         #region Single Room Operations
@@ -197,7 +338,6 @@ namespace LabApi.Extensions
             float interval = 1f / clampedFrequency;
             float pulseDuration = Mathf.Min(interval * 0.45f, 0.6f);
 
-            // Step 1: Initialize override color across all target rooms
             for (int r = 0; r < roomCount; r++)
             {
                 targetRooms[r]?.SetLightsColor(color);
@@ -205,7 +345,6 @@ namespace LabApi.Extensions
 
             float elapsedTime = 0f;
 
-            // Step 2: Periodic native pulse loop tracking the requested frequency cadence
             while (elapsedTime < duration)
             {
                 float remainingTime = duration - elapsedTime;
@@ -226,7 +365,6 @@ namespace LabApi.Extensions
                 yield return Timing.WaitForSeconds(sleepDuration);
             }
 
-            // Step 3: Revert light override color to baseline default
             for (int r = 0; r < roomCount; r++)
             {
                 targetRooms[r]?.SetLightsColor(Color.clear);

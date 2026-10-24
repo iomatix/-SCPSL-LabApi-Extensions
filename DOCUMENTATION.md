@@ -1501,9 +1501,48 @@ public static bool IsWithinRadius(this Room room, Vector3 position, float radius
 
 ---
 
+## 📦 Struct: `RoomLightSnapshot`
+
+Represents an immutable, zero-allocation snapshot capturing a room's physical power status and active color override. Used by automated orchestration systems to preserve ambient lighting states across transient facility disruptions.
+
+### 🔹 `OverrideColor`
+**Description:** Gets the active ambient override light color at the time the snapshot was taken. Evaluates to `Color.clear` if default room profile lighting was active.
+```csharp
+public Color OverrideColor { get; }
+```
+
+### 🔹 `IsPowered`
+**Description:** Gets a value indicating whether the electrical grid feeding the room light controller was active and powered. Evaluates to `false` if lights were disabled by a blackout, EMP, or containment surge.
+```csharp
+public bool IsPowered { get; }
+```
+
+### 🔹 `RoomLightSnapshot()`
+**Description:** Initializes a new instance of the `RoomLightSnapshot` struct.
+```csharp
+public RoomLightSnapshot(Color overrideColor, bool isPowered)
+```
+**Parameters:**
+- `overrideColor`: The captured override color spectrum.
+- `isPowered`: Whether the room light infrastructure was actively powered.
+
+### 🔹 `operator`
+**Description:** Checks two `RoomLightSnapshot` structures for equality.
+```csharp
+public static bool operator ==(RoomLightSnapshot left, RoomLightSnapshot right) => left.Equals(right);
+```
+
+### 🔹 `UnknownMember`
+**Description:** Checks two `RoomLightSnapshot` structures for inequality.
+```csharp
+public static bool operator !=(RoomLightSnapshot left, RoomLightSnapshot right) => !left.Equals(right);
+```
+
+---
+
 ## 📦 Class: `RoomLightingExtensions`
 
-Highly optimized extensions for controlling room lighting states and executing server-friendly flicker animations. Reuses core Room spatial structures and native engine light controller pipelines to eliminate network overhead.
+Highly optimized extensions for controlling room lighting states, executing server-friendly flicker animations, and inspecting electrical grid telemetry without allocations.
 
 ### 🔹 `MinimumFrequency`
 **Description:** Minimum allowable frequency in Hertz to avoid zero-division and infinite delay states.
@@ -1522,6 +1561,50 @@ public const float MaximumSafeFrequency = 1.2f;
 ```csharp
 public const string DefaultFlickerTag = "LabApi.Extensions-flickerLights";
 ```
+
+### 🔹 `IsLightingPowered()`
+**Description:** Verifies whether the lighting infrastructure in the specified room currently has active electrical power.
+```csharp
+public static bool IsLightingPowered(this Room room)
+```
+**Parameters:**
+- `room`: The target room wrapper instance.
+**Returns:** `true` if at least one light controller in the room reports active power feed (`LightsController.LightsEnabled` is `true`); otherwise, `false` (indicating an active blackout from anomalies such as SCP-575, SCP-079, or warhead surges).
+
+### 🔹 `GetOverrideLightsColor()`
+**Description:** Retrieves the current ambient override light color assigned to the specified room.
+```csharp
+public static Color GetOverrideLightsColor(this Room room)
+```
+**Parameters:**
+- `room`: The target room wrapper instance.
+**Returns:** The currently active `Color` override, or `Color.clear` if no custom spectrum is applied or no controllers exist.
+
+### 🔹 `CaptureLightSnapshot()`
+**Description:** Captures an atomic, zero-heap-allocation snapshot of the room's current electrical and color override state.
+```csharp
+public static RoomLightSnapshot CaptureLightSnapshot(this Room room)
+```
+**Parameters:**
+- `room`: The target room instance to sample.
+**Returns:** A stack-allocated `RoomLightSnapshot` structure representing current lighting parameters.
+
+### 🔹 `RestoreLightSnapshot()`
+**Description:** Restores a room's ambient light override color to match a previously sampled `RoomLightSnapshot`. Note: This method purposely preserves existing blackout conditions and does NOT force lights on if the grid remains unpowered.
+```csharp
+public static void RestoreLightSnapshot(this Room room, RoomLightSnapshot snapshot)
+```
+**Parameters:**
+- `room`: The target room instance to restore.
+- `snapshot`: The source snapshot containing the target override color profile.
+
+### 🔹 `RestoreLightSnapshots()`
+**Description:** Restores ambient light override colors across a collection of paired rooms and snapshots with zero delegate allocations.
+```csharp
+public static void RestoreLightSnapshots(this IEnumerable<KeyValuePair<Room, RoomLightSnapshot>> snapshots)
+```
+**Parameters:**
+- `snapshots`: A collection of key-value pairs linking rooms to their respective snapshots.
 
 ### 🔹 `TurnOffLights()`
 **Description:** Turns off lights in the specified room for a set duration using the native engine flicker pipeline.
